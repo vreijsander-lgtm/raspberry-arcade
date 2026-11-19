@@ -55,6 +55,9 @@ if [ -d "$D/main" ]; then
         [ -f "$f" ] && cp -p "$f" "$D.new/main/"
     done
 fi
+# keep the link to GitHub (installed with git clone): it still updates
+# itself from GitHub when the arcade starts
+if [ -d "$D/.git" ]; then cp -a "$D/.git" "$D.new/.git"; fi
 rm -rf "$D.old"
 if [ -d "$D" ]; then mv "$D" "$D.old"; fi
 mv "$D.new" "$D"

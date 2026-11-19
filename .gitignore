@@ -11,3 +11,6 @@ __pycache__/
 
 # Claude Code: personal settings stay on this PC
 .claude/settings.local.json
+
+# Pi logs
+update.log
