@@ -1,0 +1,12 @@
+# The arcade Pis to update - ONLY the Pis listed here get the update.
+# Your other Pis are never touched.
+#
+# One Pi per line:   name-or-ip   [user]   [folder]
+#   name-or-ip  the Pi's network name (e.g. arcade1.local) or its IP address
+#   user        the user you log in with on that Pi (default: pi)
+#   folder      where the arcade folder is, inside that user's home (default: picade)
+#
+# Examples (remove the # in front to use them):
+# arcade1.local
+# arcade2.local   pi
+# 192.168.1.42    gamer   picade

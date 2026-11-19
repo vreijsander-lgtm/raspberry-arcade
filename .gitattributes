@@ -1,0 +1,5 @@
+# Keep Linux line endings everywhere: the Pis run these files, and a .sh script
+# with Windows line endings (CRLF) does not run on a Raspberry Pi.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary

@@ -1,0 +1,13 @@
+# every Pi (and this PC) keeps its own scores and settings - never on GitHub
+highscores*.json
+config.json
+*.tmp
+game.log
+
+# junk
+__pycache__/
+*.pyc
+.idea/
+
+# Claude Code: personal settings stay on this PC
+.claude/settings.local.json
