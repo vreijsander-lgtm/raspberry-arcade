@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/autopush.py\"",
+            "timeout": 120,
+            "statusMessage": "Saving to GitHub..."
+          }
+        ]
+      }
+    ]
+  }
+}
