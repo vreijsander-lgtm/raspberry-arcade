@@ -284,6 +284,7 @@ class TitleUI:
         self.draw_random_button(t)
         self.text("UP / DOWN : CHOOSE        B2 : PLAY", self.font_tiny, (200, 190, 240),
                   (cx, H - 22), "center")
+        self.text("MADE BY SANDER", self.font_tiny, (160, 150, 205), (12, H - 22), "midleft")
 
     def draw_random_button(self, t):
         """RANDOM GAME button on the floor below the cards."""
