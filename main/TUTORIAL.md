@@ -546,6 +546,23 @@ starts fullscreen by itself**. (Booting takes a little while, wait until the des
 
 ---
 
+## 9b. Automatic updates from GitHub (when the arcade starts)
+
+If the arcade was installed with
+`git clone https://github.com/vreijsander-lgtm/raspberry-arcade.git ~/picade`, then every
+time it starts (`run.sh`, also at boot) it first checks GitHub for a newer version, downloads
+it and then starts the games.
+
+* No internet or GitHub too slow: after at most 15 seconds it starts the version it has.
+* Scores (`highscores*.json`) and settings (`config.json`) are never changed by an update.
+* The Pi always follows GitHub exactly: changes made to the game code **on the Pi itself**
+  are replaced by the GitHub version.
+* `main/update.log` shows what the last start did ("Updated to ...", "Already the newest
+  version", "No connection ...").
+* Switch it off for one Pi: add `"auto_update": false` to its `main/config.json`.
+* A Pi with an older `run.sh` (from before this existed) needs one manual update first:
+  `cd ~/picade && git pull` (or the PC tool in section 10).
+
 ## 10. Update all arcade Pis from your PC (one click)
 
 The `update` folder (next to `main`) has a tool that sends the newest version of the arcade

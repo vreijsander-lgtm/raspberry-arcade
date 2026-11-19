@@ -115,6 +115,7 @@ updates. The most useful ones:
 | `"gpio_enabled"`, `"gpio_pins"` | buttons wired to the GPIO pins (BCM numbers, each button to GND) |
 | `"joy_buttons"` | which USB-stick buttons are Button 1 / Button 2 (`python3 stick_test.py` in `~/picade/main` shows the numbers) |
 | `"shared_scores"`, `"score_group"` | share the high-score tables between all arcade Pis on your network |
+| `"auto_update"` | `false` = don't download the newest version from GitHub at start (default: on) |
 
 The full guide (wiring the buttons, screens, multiplayer, every game) is in
 **[main/TUTORIAL.md](main/TUTORIAL.md)**.
@@ -138,6 +139,15 @@ The host picks the **mode** with LEFT / RIGHT in the lobby and starts with Butto
 ---
 
 ## Updating your Pis
+
+**Automatically, every time the arcade starts.** If a Pi was installed with `git clone`
+(as above), `run.sh` first checks GitHub for a newer version and downloads it, then starts
+the games. Without internet it waits at most 15 seconds and starts the version it has.
+Scores and settings are never touched. What happened is written to `main/update.log`. To
+switch it off on one Pi, put `"auto_update": false` in its `main/config.json`.
+
+> A Pi that still has an **older** `run.sh` (from before this feature) needs one update by
+> hand first (`git pull` below, or the PC tool). From then on it updates itself.
 
 **Option A: from your PC, in one click.** Put your arcade Pis in [`update/pis.txt`](update/pis.txt)
 and double-click [`update/update_pis.bat`](update/update_pis.bat). Only the Pis in that list are
