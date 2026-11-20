@@ -24,10 +24,30 @@ Python and pygame, which is handy for testing.
 
 The start menu also has a **RANDOM GAME** button.
 
-Every game has extra **modes** (picked with `MODE < … >` in its menu), for example Tetris
-**CHAOS** (every block is a random new shape), Pulsar **POWER** (power-up orbs) and
-**BRICKS** (a brick breaker), or Glowbug **FRENZY**. Every mode has its own top 10. In
-multiplayer, the host picks the mode in the lobby.
+### Game modes
+
+Most games have extra **modes**, picked with `MODE < … >` in the game's menu. Every mode has
+its own top 10. In multiplayer, the host picks the mode in the lobby.
+
+| Game | Mode | What it does | Multiplayer |
+|------|------|--------------|-------------|
+| **Tetris** | CLASSIC | The normal game | ✅ |
+| | CHAOS | Every block is a random new shape | ✅ |
+| **Space Shooter** | CLASSIC | The normal game | ✅ |
+| | BOSS RUSH | A boss fight every wave | ✅ |
+| | ONE LIFE | No extra lives | ✅ |
+| **Sky Hopper** | CLASSIC | The normal game | ✅ |
+| | TURBO | Everything runs 1.75× faster, and the screen rises fast right away | ✅ |
+| **Saber Brawl** | CLASSIC | The normal game: a ladder of 6 opponents | ✅ |
+| | GLASS JAW | Every hit does triple damage | ✅ |
+| **Glowbug** | CLASSIC | The normal game | ✅ |
+| | FRENZY | Everything runs 1.75× faster, and all the spiders come out at once | ✅ |
+| **Pulsar** | CLASSIC | The longer nobody scores, the faster the ball | ✅ |
+| | POWER | Hit the ball through power-up orbs | ✅ |
+| | MULTIBALL | An extra ball for every 5 points (up to 3) | ✅ |
+| | SHRINK | Your paddle shrinks with every point | ✅ |
+| | BRICKS | A brick breaker: a smash plows straight through | ❌ single player only |
+| **Star Toss** | *(one mode)* | Hold to spin, let go to throw | ❌ single player only |
 
 ---
 
