@@ -387,30 +387,26 @@ GAMES = [("TETRIS", "main"), ("SPACE SHOOTER", "sh_main"), ("SKY HOPPER", "pf_ma
 # mode has its own scoreboard (see board_key).
 GAME_MODES = {
     "tetris": [("CLASSIC", "THE NORMAL GAME"),
-               ("CHAOS", "EVERY BLOCK IS A RANDOM NEW SHAPE!"),
-               ("BLITZ", "2 MINUTES: SCORE AS MUCH AS YOU CAN")],
+               ("CHAOS", "EVERY BLOCK IS A RANDOM NEW SHAPE!")],
     "shooter": [("CLASSIC", "THE NORMAL GAME"),
                 ("BOSS RUSH", "A BOSS FIGHT EVERY WAVE"),
-                ("ONE LIFE", "NO EXTRA LIVES - DOUBLE POINTS")],
+                ("ONE LIFE", "NO EXTRA LIVES")],
     "platformer": [("CLASSIC", "THE NORMAL GAME"),
-                   ("TURBO", "THE SCREEN RISES FAST - DOUBLE POINTS"),
-                   ("LIGHTS OUT", "ONLY A SMALL LIGHT AROUND YOU - x1.5 POINTS")],
+                   ("TURBO", "THE SCREEN RISES FAST")],
     "fighter": [("CLASSIC", "THE NORMAL GAME"),
-                ("SURVIVAL", "1 ROUND EACH - YOUR HEALTH CARRIES OVER"),
                 ("GLASS JAW", "EVERY HIT DOES TRIPLE DAMAGE")],
     "glowbug": [("CLASSIC", "THE NORMAL GAME"),
-                ("LIGHTS OUT", "A DARK MAZE - x1.5 POINTS"),
-                ("FRENZY", "FAST SPIDERS, ALL AT ONCE - x2 POINTS")],
+                ("FRENZY", "FAST SPIDERS, ALL AT ONCE")],
     "pulsar": [("CLASSIC", "THE LONGER NOBODY SCORES, THE FASTER THE BALL"),
                ("POWER", "POWER-UP ORBS: HIT THE BALL THROUGH THEM"),
                ("MULTIBALL", "AN EXTRA BALL FOR EVERY 5 POINTS (UP TO 3)"),
-               ("SHRINK", "YOUR PADDLE SHRINKS WITH EVERY POINT - x2 POINTS"),
+               ("SHRINK", "YOUR PADDLE SHRINKS WITH EVERY POINT"),
                ("BRICKS", "BREAK WALLS OF BRICKS - A SMASH PLOWS THROUGH")],
 }
 # modes that work in multiplayer (the host picks one in the lobby)
 MP_MODES = {game: [m for m, _d in modes if not (game == "pulsar" and m == "BRICKS")]
             for game, modes in GAME_MODES.items()}
-MP_NOTES = {("fighter", "SURVIVAL"): "ONE ROUND, NO REMATCH"}
+MP_NOTES = {}
 
 MENU_GAME = {"main": "tetris", "sh_main": "shooter", "pf_main": "platformer",
              "fg_main": "fighter", "gb_main": "glowbug", "pu_main": "pulsar"}
@@ -1477,9 +1473,6 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Title
         self.text(str(g.lines), self.font_med, WHITE, (295, 100))
         if extra:
             label, value = extra
-        elif g.time_left is not None:                    # BLITZ: time left
-            sec = int(g.time_left + 999) // 1000
-            label, value = "TIME", "%d:%02d" % (sec // 60, sec % 60)
         else:
             label, value = "BEST", str(self.board(self.board_key("tetris", g.mode)).best())
         self.text(label, self.font_small, HUD_LABEL, (410, 78))
@@ -1805,7 +1798,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Title
         elif self.mp_game == "shooter":
             self.draw_shooter_world(self.game, ("ALIVE", self.alive_text()))
         else:
-            self.draw_play(None if self.game.time_left is not None else ("ALIVE", self.alive_text()))
+            self.draw_play(("ALIVE", self.alive_text()))
         self.screen.blit(self.overlay, (0, 0))
         remaining = self.countdown - self.state_age / 1000.0
         self.text(str(max(1, int(math.ceil(remaining)))), self.font_huge, WHITE,
@@ -1850,7 +1843,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Title
             if g.game_over and not self.mp_menu_open:
                 self.screen.blit(self.overlay, (0, 0))
         else:
-            self.draw_play(None if self.game.time_left is not None else ("ALIVE", self.alive_text()))
+            self.draw_play(("ALIVE", self.alive_text()))
             if g.game_over and not self.mp_menu_open:
                 self.dim(COLS * CELL, ROWS * CELL, BOARD_X, BOARD_Y)
         if g.game_over and not self.mp_menu_open:

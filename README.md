@@ -26,7 +26,7 @@ The start menu also has a **RANDOM GAME** button.
 
 Every game has extra **modes** (picked with `MODE < … >` in its menu), for example Tetris
 **CHAOS** (every block is a random new shape), Pulsar **POWER** (power-up orbs) and
-**BRICKS** (a brick breaker), or Glowbug **LIGHTS OUT**. Every mode has its own top 10. In
+**BRICKS** (a brick breaker), or Glowbug **FRENZY**. Every mode has its own top 10. In
 multiplayer, the host picks the mode in the lobby.
 
 ---

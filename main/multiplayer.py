@@ -525,20 +525,10 @@ class HostSession:
             del self.players[cid]
         return True
 
-    def _score_ranked(self):
-        """Modes where the best score wins (not the last one standing)."""
-        return self.game == "tetris" and self.game_mode == "BLITZ"
-
     def _check_end(self):
         if self.phase != "playing":
             return
         alive = [c for c, p in self.players.items() if p["alive"]]
-        if self._score_ranked():
-            if not alive or all(self.players[c]["gone"] for c in alive):
-                self.finish()             # BLITZ: when everybody's time is up
-            elif len([c for c in self.players if c in self.conns]) <= 1 and self.started_with >= 2:
-                self.finish()             # (everybody else left)
-            return
         if len(alive) == 0 or (self.started_with >= 2 and len(alive) <= 1):
             self.finish()
 
@@ -596,10 +586,6 @@ class HostSession:
         alive = sorted((c for c, p in self.players.items() if p["alive"]),
                        key=lambda c: -self.players[c]["score"])
         dead = [c for c in reversed(self.death_order) if c in self.players]
-        if self._score_ranked():                   # BLITZ: just the scores
-            alive = sorted(self.players, key=lambda c: (self.players[c]["gone"],
-                                                        -self.players[c]["score"]))
-            dead = []
         self.ranking = [
             {"cid": c, "name": self.players[c]["name"],
              "score": self.players[c]["score"], "place": i + 1}

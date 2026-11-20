@@ -19,7 +19,7 @@ steeply, the middle sends it straight.
 Modes:
     CLASSIC     as above
     MULTIBALL   one extra ball for every 5 points you have (up to 3 at once)
-    SHRINK      your paddle gets a bit smaller with every point (x2 points)
+    SHRINK      your paddle gets a bit smaller with every point
     BRICKS      no computer: break walls of bricks at the top instead.
                 The ball keeps one steady speed here (no speeding up).
                 Broken bricks sometimes drop a power-up capsule - catch it
@@ -116,7 +116,6 @@ class Pulsar:
     def __init__(self, seed=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
         self.mode = mode if mode in MODES else "CLASSIC"
-        self.mult = 2 if self.mode == "SHRINK" else 1
         self.points = 0                  # points you scored
         self.cpu_points = 0
         self.hits = 0                    # returns (all game)
@@ -571,7 +570,7 @@ class Pulsar:
             self._bounce(b, self.px, pw, up=True, smash=smash)
             b["y"] = PLAYER_Y - PAD_H / 2 - BALL_R
             if not self.versus:
-                self.score += 10 * self.mult
+                self.score += 10
             self.effects.append(["smash" if smash else "hit", b["x"], b["y"], 0.0, 0.35])
             if smash:
                 self.popups.append(["SMASH!", b["x"], b["y"] - 20, 0.0])
@@ -592,7 +591,7 @@ class Pulsar:
             self.balls.remove(b)
             self.points += 1
             if not self.versus:
-                pts = 100 * (1 + self.points // 5) * self.mult
+                pts = 100 * (1 + self.points // 5)
                 self.score += pts
                 self.popups.append(["+%d" % pts, b["x"], TOP + 30, 0.0])
             self.effects.append(["goal", b["x"], TOP, 0.0, 0.5])

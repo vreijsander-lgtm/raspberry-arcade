@@ -378,24 +378,18 @@ RANDOM GAME button on the start screen all use the mode that is picked. Every mo
 **own top 10** (`highscores_tetris_chaos.json` and so on), shared with the other Pis.
 **Multiplayer:** the host picks the mode in its lobby with **LEFT / RIGHT** (for Tetris,
 UP / DOWN sets the start level); everybody who joined sees the mode before the start, and the
-whole round is played in it. Every mode works online except Pulsar BRICKS. Online, Tetris
-BLITZ is won by the best score when the 2 minutes are up, and Saber Brawl SURVIVAL means one
-round decides it.
+whole round is played in it. Every mode works online except Pulsar BRICKS.
 
 | Game | Mode | What changes |
 |------|------|--------------|
 | Tetris | CHAOS | every block is a brand new random shape (3 to 6 squares) |
-| Tetris | BLITZ | 2 minutes to score as much as you can; the speed goes up every 5 lines |
 | Space Shooter | BOSS RUSH | a boss every wave (a bit weaker); you start with 3 free upgrades |
-| Space Shooter | ONE LIFE | 1 life and no extra lives, but double points |
-| Sky Hopper | TURBO | the screen starts rising almost right away, and fast; double points |
-| Sky Hopper | LIGHTS OUT | you only see a small light around you; x1.5 points |
-| Saber Brawl | SURVIVAL | 1 round per opponent; your health carries over (+35% between fights) |
+| Space Shooter | ONE LIFE | 1 life and no extra lives |
+| Sky Hopper | TURBO | the screen starts rising almost right away, and fast |
 | Saber Brawl | GLASS JAW | every hit does triple damage, for everybody |
-| Glowbug | LIGHTS OUT | a dark maze, only the spiders' red eyes glow; x1.5 points |
-| Glowbug | FRENZY | faster spiders that all come out at once; double points |
+| Glowbug | FRENZY | faster spiders that all come out at once |
 | Pulsar | MULTIBALL | an extra ball for every 5 points you have (up to 3 at once) |
-| Pulsar | SHRINK | your paddle gets a bit smaller with every point; double points |
+| Pulsar | SHRINK | your paddle gets a bit smaller with every point |
 | Pulsar | POWER | power-up orbs float across the middle: hit the ball through one and it's yours (WIDE paddle, MINI for the other side, x3 balls, SHIELD, FREEZE the other paddle, auto-SMASH); the computer collects them too |
 | Pulsar | BRICKS | no computer: break walls of bricks (metal ones need 2 hits) at one steady ball speed; a SMASH plows straight through bricks; bricks drop power-ups (below); single player only |
 

@@ -474,26 +474,22 @@ class Brain:
                 self.run([(0, ("back",), ())], 0.4)
 
 
-MODES = ("CLASSIC", "SURVIVAL", "GLASS JAW")
-SURVIVAL_HEAL = 0.35             # SURVIVAL: health back between opponents (part of max)
+MODES = ("CLASSIC", "GLASS JAW")
 GLASS_POWER = 3.0                # GLASS JAW: every hit does this much more damage
 
 
 class Brawl:
     """One run: the ladder of opponents, until you lose a match.
-    SURVIVAL: one round per opponent and your health carries over.
     GLASS JAW: every hit does triple damage (for everybody)."""
     versus = False
     me = 0                               # which fighter is "you" (0 = left)
     mode = "CLASSIC"
     rounds_to_win = ROUNDS_TO_WIN
-    carry_hp = None                      # SURVIVAL: health carried into the next opponent
 
     def __init__(self, seed=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
         self.mode = mode if mode in MODES else "CLASSIC"
-        self.rounds_to_win = 1 if self.mode == "SURVIVAL" else ROUNDS_TO_WIN
-        self.carry_hp = None
+        self.rounds_to_win = ROUNDS_TO_WIN
         self.player = Fighter(PLAYER, 150, 1)
         if self.mode == "GLASS JAW":
             self.player.power *= GLASS_POWER
@@ -519,10 +515,6 @@ class Brawl:
         self.cpu.power *= 1 + 0.1 * self.loop
         if self.mode == "GLASS JAW":
             self.cpu.power *= GLASS_POWER
-        self.carry_hp = None
-        if self.mode == "SURVIVAL" and self.stage > 1:
-            p = self.player
-            self.carry_hp = min(float(p.max_hp), p.hp + SURVIVAL_HEAL * p.max_hp)
         self.stage_info = info
         self.brain = Brain(d, self.rng)
         self.p_rounds = self.c_rounds = 0
@@ -536,8 +528,6 @@ class Brawl:
         self.round_no += 1
         self.player.reset(150, 1)
         self.cpu.reset(390, -1)
-        if self.carry_hp:
-            self.player.hp = self.carry_hp
         if self.brain:
             self.brain.script = None
             self.brain.think_in = 0.6
@@ -868,9 +858,9 @@ class Versus(Brawl):
     def __init__(self, seed=None, names=("P1", "P2"), me=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
         self.me = me
-        # SURVIVAL online = one round decides it; GLASS JAW = triple damage
+        # GLASS JAW = triple damage
         self.mode = mode if mode in MODES else "CLASSIC"
-        self.rounds_to_win = 1 if self.mode == "SURVIVAL" else ROUNDS_TO_WIN
+        self.rounds_to_win = ROUNDS_TO_WIN
         self.player = Fighter(dict(PLAYER, name=str(names[0])[:12]), 150, 1)
         self.cpu = Fighter(dict(P2_LOOK, name=str(names[1])[:12]), 390, -1)
         if self.mode == "GLASS JAW":

@@ -161,21 +161,18 @@ class Spider(Actor):
         self.bob = random.random() * 6
 
 
-MODES = ("CLASSIC", "LIGHTS OUT", "FRENZY")
+MODES = ("CLASSIC", "FRENZY")
 
 
 class Glowbug:
     """Single player: lives, levels and a score.
-    LIGHTS OUT: the maze is dark, you only see close by (x1.5 points).
-    FRENZY: faster spiders, all out of the nest at once (x2 points)."""
+    FRENZY: faster spiders, all out of the nest at once."""
     race = False
     mode = "CLASSIC"
-    score_mult = 1.0
 
     def __init__(self, seed=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
         self.mode = mode if mode in MODES else "CLASSIC"
-        self.score_mult = {"LIGHTS OUT": 1.5, "FRENZY": 2.0}.get(self.mode, 1.0)
         self.score = 0
         self.level = 1
         self.lives = START_LIVES
@@ -566,7 +563,7 @@ class Glowbug:
             self.popups.append([str(pts), x, y, 0.0])
 
     def add_score(self, pts):
-        self.score += int(pts * self.score_mult)
+        self.score += pts
         if self.score >= self.next_life:
             self.lives += 1
             self.next_life += EXTRA_LIFE
@@ -628,7 +625,7 @@ class GlowRace(Glowbug):
     def __init__(self, seed=None, names=("P1", "P2"), me=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
         self.me = me
-        self.mode = mode if mode in MODES else "CLASSIC"     # LIGHTS OUT / FRENZY work here too
+        self.mode = mode if mode in MODES else "CLASSIC"     # FRENZY works here too
         self.racers = [Bug(*RACE_SPAWNS[i], idx=i, name=str(n)[:12])
                        for i, n in enumerate(list(names)[:MAX_RACERS])]
         self.bug = self.racers[0]

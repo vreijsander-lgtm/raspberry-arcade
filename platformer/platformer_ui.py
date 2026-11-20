@@ -257,8 +257,6 @@ class PlatformerUI:
         for x, y, text, age in g.popups:
             self.text(text, self.font_small, GOLD, (int(x), int(y - cam)), "center")
 
-        if g.mode == "LIGHTS OUT" and not g.dead:     # only a light around you
-            self.draw_darkness(g.x + pf.PW / 2, g.y + pf.PH / 2 - cam, 135)
         if g.scroll_speed() > 0:                 # the bottom is dangerous
             pulse = 0.6 + 0.4 * math.sin(t * 5)
             glow = a["danger"]

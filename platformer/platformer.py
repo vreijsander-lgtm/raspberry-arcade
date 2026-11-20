@@ -46,7 +46,7 @@ AIR_DRIFT = 1.2                  # ... and in the air without pressing anything
 COYOTE = 0.09                    # you can still jump this long after walking off
 JUMP_BUFFER = 0.13               # a jump pressed this early before landing still counts
 START_HEARTS = 3
-MODES = ("CLASSIC", "TURBO", "LIGHTS OUT")
+MODES = ("CLASSIC", "TURBO")
 INVULN_TIME = 1.6
 
 # world
@@ -80,10 +80,8 @@ def _overlap(ax, ay, aw, ah, bx, by, bw, bh):
 class Platformer:
     def __init__(self, seed=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
-        # TURBO: the screen rises fast right away (x2 points).
-        # LIGHTS OUT: you only see a small light around you (x1.5 points).
+        # TURBO: the screen rises fast right away.
         self.mode = mode if mode in MODES else "CLASSIC"
-        self.score_mult = {"TURBO": 2.0, "LIGHTS OUT": 1.5}.get(self.mode, 1.0)
         # player (x, y = top-left of the hit box, world coordinates, y down)
         self.x = SW / 2.0 - PW / 2.0
         self.y = FLOOR_Y - PH
@@ -136,8 +134,7 @@ class Platformer:
 
     @property
     def score(self):
-        return int((self.meters * POINTS_PER_M + self.stomps * STOMP_POINTS + self.bonus)
-                   * self.score_mult)
+        return int(self.meters * POINTS_PER_M + self.stomps * STOMP_POINTS + self.bonus)
 
     def difficulty(self):
         """0.0 at the start, 1.0 at 1200 m."""

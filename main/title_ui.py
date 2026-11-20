@@ -334,20 +334,6 @@ class TitleUI:
             px, py = rot(dx, dy)
             pygame.draw.circle(scr, (30, 30, 50), (int(px), int(py)), max(2, half // 6))
 
-    def draw_darkness(self, x, y, radius):
-        """LIGHTS OUT modes: everything dark except a soft circle of light."""
-        cache = self.__dict__.setdefault("_dark_cache", {})
-        surf = cache.get(radius)
-        if surf is None:
-            surf = pygame.Surface((W * 2, H * 2), pygame.SRCALPHA)
-            surf.fill((0, 0, 6, 246))
-            inner, outer = int(radius * 0.55), int(radius * 1.6)
-            for r in range(outer, 0, -2):
-                f = max(0.0, min(1.0, (r - inner) / float(outer - inner)))
-                pygame.draw.circle(surf, (0, 0, 6, int(246 * f)), (W, H), r)
-            cache[radius] = surf
-        self.screen.blit(surf, (int(x) - W, int(y) - H))
-
     def draw_sparkles(self, t, ymax=400):
         """A few little twinkles that pop up around the logo."""
         for i in range(6):

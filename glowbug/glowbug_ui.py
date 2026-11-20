@@ -311,16 +311,6 @@ class GlowbugUI:
         for text, x, y, age in g.popups:
             sx, sy = to_screen(x, y)
             self.text(text, self.font_small, GOLD, (sx, sy - 14 - int(age * 24)), "center")
-        me_bug = g.mine() if g.race else g.bug
-        if g.mode == "LIGHTS OUT" and g.phase != "clear" and me_bug is not None:
-            bx, by = to_screen(me_bug.x, me_bug.y)
-            self.draw_darkness(bx, by, int(CELL * 3.3))
-            for sp in g.spiders:                     # their red eyes shine in the dark
-                if sp.state in ("chase", "leave") and not sp.scared:
-                    sx, sy = to_screen(sp.x, sp.y)
-                    fx, fy = sp.dir if sp.dir != (0, 0) else (0, 1)
-                    pygame.draw.circle(self.screen, (255, 60, 60),
-                                       (int(sx + fx * 10), int(sy + fy * 10)), 3)
         if g.race:
             self.draw_race_hud(g, t)
         else:

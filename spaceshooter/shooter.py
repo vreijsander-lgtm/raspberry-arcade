@@ -162,9 +162,8 @@ class Shooter:
         self.rng = random.Random(seed)
         self.mp = multiplayer
         self.mode = mode if mode in MODES else "CLASSIC"
-        # BOSS RUSH: a boss every wave. ONE LIFE: 1 life, no extra lives, double points
+        # BOSS RUSH: a boss every wave. ONE LIFE: 1 life, no extra lives
         self.boss_every = 1 if self.mode == "BOSS RUSH" else BOSS_EVERY
-        self.score_mult = 2 if self.mode == "ONE LIFE" else 1
         self.x = SW / 2.0
         self.lives = 1 if self.mode == "ONE LIFE" else START_LIVES
         self.score = 0
@@ -438,7 +437,7 @@ class Shooter:
         b = self.boss
         self.boss = None
         self.bosses_beaten += 1
-        self.score += BOSS_POINTS * b["n"] * self.score_mult
+        self.score += BOSS_POINTS * b["n"]
         self.kills += 1
         self.ebullets = []
         self.bullets = []
@@ -941,7 +940,7 @@ class Shooter:
 
     def _kill(self, e):
         spec = ENEMIES[e["k"]]
-        self.score += spec["points"] * self.score_mult
+        self.score += spec["points"]
         self.kills += 1
         self.effects.append([e["x"], e["y"], 0.0, 0.45, (255, 200, 80)])
         if self.rng.random() < COIN_CHANCE:

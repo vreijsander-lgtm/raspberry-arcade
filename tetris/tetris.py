@@ -35,8 +35,7 @@ CHAOS_COLORS = {"a": (255, 95, 95), "b": (255, 165, 60), "c": (245, 225, 80),
                 "d": (110, 230, 110), "e": (80, 215, 235), "f": (95, 125, 255),
                 "g": (190, 105, 255), "h": (255, 115, 200)}
 COLORS.update(CHAOS_COLORS)
-MODES = ("CLASSIC", "CHAOS", "BLITZ")
-BLITZ_TIME = 120000          # ms: BLITZ = score as much as you can in 2 minutes
+MODES = ("CLASSIC", "CHAOS")
 
 # (box size, cells) - rotations are generated below
 PIECES = {
@@ -89,7 +88,6 @@ class Tetris:
     def __init__(self, start_level=1, seed=None, mode="CLASSIC"):
         self.rng = random.Random(seed)   # same seed = same pieces for everyone
         self.mode = mode if mode in MODES else "CLASSIC"
-        self.time_left = BLITZ_TIME if self.mode == "BLITZ" else None
         self.grid = [[None] * COLS for _ in range(ROWS)]
         self.bag = []
         self.score = 0
@@ -217,11 +215,6 @@ class Tetris:
     def update(self, dt, soft):
         if self.game_over:
             return
-        if self.time_left is not None:          # BLITZ: the clock runs out = the end
-            self.time_left = max(0, self.time_left - dt)
-            if self.time_left <= 0:
-                self.game_over = True
-                return
         if not soft:
             self.soft_block = False
         if soft and not self.soft_block:
@@ -262,7 +255,7 @@ class Tetris:
             self.score += POINTS.get(cleared, 800) * self.level
             self.lines += cleared
             self.clears_unsent += cleared
-            self.level = self.start_level + self.lines // (5 if self.mode == "BLITZ" else 10)
+            self.level = self.start_level + self.lines // 10
         if self.pending_garbage:
             self._apply_garbage()
         self.soft_block = True   # must release DOWN before next piece soft-drops
