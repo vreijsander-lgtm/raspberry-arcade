@@ -47,6 +47,7 @@ COYOTE = 0.09                    # you can still jump this long after walking of
 JUMP_BUFFER = 0.13               # a jump pressed this early before landing still counts
 START_HEARTS = 3
 MODES = ("CLASSIC", "TURBO")
+TURBO_SPEED = 1.75               # TURBO: the whole game runs this much faster
 INVULN_TIME = 1.6
 
 # world
@@ -80,8 +81,9 @@ def _overlap(ax, ay, aw, ah, bx, by, bw, bh):
 class Platformer:
     def __init__(self, seed=None, mode="CLASSIC"):
         self.rng = random.Random(seed)
-        # TURBO: the screen rises fast right away.
+        # TURBO: the whole game runs faster and the screen rises fast right away.
         self.mode = mode if mode in MODES else "CLASSIC"
+        self.speed = TURBO_SPEED if self.mode == "TURBO" else 1.0
         # player (x, y = top-left of the hit box, world coordinates, y down)
         self.x = SW / 2.0 - PW / 2.0
         self.y = FLOOR_Y - PH
@@ -245,7 +247,7 @@ class Platformer:
     # Update
     # ------------------------------------------------------------------
     def update(self, dt_ms, left, right, jump_held):
-        dt = min(0.1, dt_ms / 1000.0)
+        dt = min(0.1, dt_ms / 1000.0) * self.speed
         self.jump_held = jump_held
         self.time += dt
         if self.game_over:                       # out: just watch the others climb
@@ -511,7 +513,7 @@ class Platformer:
 
     def advance_world(self, dt_ms, cam):
         """Spectator (host) view: move the world, no player, camera at `cam`."""
-        dt = min(0.1, dt_ms / 1000.0)
+        dt = min(0.1, dt_ms / 1000.0) * self.speed
         self.time += dt
         self._move_world(dt)
         if cam is not None and cam < self.cam_y:

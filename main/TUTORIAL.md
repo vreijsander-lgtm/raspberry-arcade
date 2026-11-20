@@ -385,9 +385,9 @@ whole round is played in it. Every mode works online except Pulsar BRICKS.
 | Tetris | CHAOS | every block is a brand new random shape (3 to 6 squares) |
 | Space Shooter | BOSS RUSH | a boss every wave (a bit weaker); you start with 3 free upgrades |
 | Space Shooter | ONE LIFE | 1 life and no extra lives |
-| Sky Hopper | TURBO | the screen starts rising almost right away, and fast |
+| Sky Hopper | TURBO | the whole game runs 1.75x faster, and the screen starts rising almost right away, and fast |
 | Saber Brawl | GLASS JAW | every hit does triple damage, for everybody |
-| Glowbug | FRENZY | faster spiders that all come out at once |
+| Glowbug | FRENZY | the whole game runs 1.75x faster, the spiders are faster still, and they all come out at once |
 | Pulsar | MULTIBALL | an extra ball for every 5 points you have (up to 3 at once) |
 | Pulsar | SHRINK | your paddle gets a bit smaller with every point |
 | Pulsar | POWER | power-up orbs float across the middle: hit the ball through one and it's yours (WIDE paddle, MINI for the other side, x3 balls, SHIELD, FREEZE the other paddle, auto-SMASH); the computer collects them too |

@@ -162,11 +162,13 @@ class Spider(Actor):
 
 
 MODES = ("CLASSIC", "FRENZY")
+FRENZY_SPEED = 1.75              # FRENZY: the whole game runs this much faster
 
 
 class Glowbug:
     """Single player: lives, levels and a score.
-    FRENZY: faster spiders, all out of the nest at once."""
+    FRENZY: the whole game runs much faster, the spiders even more,
+    and they all come out of the nest at once."""
     race = False
     mode = "CLASSIC"
 
@@ -445,6 +447,8 @@ class Glowbug:
     # ------------------------------------------------------------------
     def tick_common(self, dt_ms):
         dt = min(dt_ms, 50) / 1000.0
+        if self.mode == "FRENZY":
+            dt *= FRENZY_SPEED
         self._dist_cache = {}
         for e in self.effects:
             e[3] += dt
