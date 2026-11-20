@@ -354,8 +354,10 @@ class GlowbugUI:
             label = "YOU" if me else b.name[:8]
             self.text(label, self.font_tiny, GOLD if me else body, (x, y - 24), "center")
             return
+        if g.game_over:                              # out of lives: the bug is gone
+            return
         if g.phase == "dying":
-            f = min(1.0, g.phase_t / (gb.DEATH_TIME * 0.8))
+            f = max(0.0, min(1.0, g.phase_t / (gb.DEATH_TIME * 0.8)))
             for i in range(8):                       # bursts into sparkles
                 a = i * math.tau / 8 + f
                 d = 4 + 40 * f
