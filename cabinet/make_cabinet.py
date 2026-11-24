@@ -8,10 +8,11 @@ Picade mini arcade cabinet - makes the STL files to 3D print.
 
 The cabinet is a kit of flat panels, each printed lying flat (no supports) and
 small enough for a 256 x 256 mm bed (BED below). It CLICKS together, no glue or
-screws: the panels have springy arrow clips on both side edges that snap through
-the slots in the side walls. Put the panels into one side wall (they rest on its
-ledges), then press the other side wall on until every clip clicks. To take it
-apart, squeeze the two prongs of a clip together and pull the wall off.
+screws: the panels have springy arrow clips on both side edges that snap into
+slots in the side walls. The clips click into pockets hidden inside the 6 mm side
+walls, and the walls' lip wraps round the panel edges, so the outside stays clean. Put the panels into one side wall (they rest
+on its ledges), then press the other side wall on until every clip clicks. It is
+meant to stay together - to open the cabinet, slide the back panel up.
     cabinet_side_left.stl / cabinet_side_right.stl
                              the two sides: slots for the clips, ledges the panels
                              rest on, and the rails for the back panel
@@ -24,8 +25,8 @@ apart, squeeze the two prongs of a clip together and pull the wall off.
     cabinet_back_panel.stl   the back: slides UP out of the rails to open it
 
 Test prints, to check the sizes first (quick, small):
-    test_click.stl           one clip + a bit of side wall with its slot: it should
-                             click in and hold (tell me if it's too tight / loose)
+    test_click.stl           one clip + a bit of side wall with its slot and hidden
+                             pocket: it should click in and hold (too tight / loose?)
     test_controls.stl        joystick holes + one button hole, in a strip of deck
     test_screen.stl          a template of the screen board: lay it on the front of the
                              screen - the window should frame the picture and the holes
@@ -48,7 +49,7 @@ import struct
 # Sizes you may want to change
 # ----------------------------------------------------------------------------
 WALL = 3.0                 # wall thickness
-WIDTH = 182.0              # outside width of the cabinet (x)
+WIDTH = 190.0              # outside width of the cabinet (x)
 DEPTH = 170.0              # outside depth (y, front = 0)
 FRONT_H = 40.0             # height of the front edge of the control deck
 DECK_BACK = (80.0, 52.0)   # (y, z) where the deck meets the screen face
@@ -279,7 +280,10 @@ class Mesh:
 # ----------------------------------------------------------------------------
 # The cabinet
 # ----------------------------------------------------------------------------
-X_IN = WIDTH / 2 - WALL                     # inner side wall faces at +-X_IN
+SIDE_T = 7.0                                # side walls: thick enough to hide the clips inside
+SIDE_SKIN = 1.2                             # the closed outside skin over the clip pockets
+POCKET_TOP = 3.8                            # the clip pockets go from the skin up to here
+X_IN = WIDTH / 2 - SIDE_T                   # inner side wall faces at +-X_IN
 TILT = math.radians(FACE_TILT)
 FACE_DIR = (0.0, math.sin(TILT), math.cos(TILT))                   # up the screen face
 FACE_TOP = (DECK_BACK[0] + FACE_LEN * FACE_DIR[1], DECK_BACK[1] + FACE_LEN * FACE_DIR[2])
@@ -320,13 +324,15 @@ FACE_START = 1.5                            # the face starts this far up, resti
 # ---- click system: every panel has springy arrow clips on both side edges that snap
 # through slots in the side walls (prongs squeeze together going in, the barbs click
 # out behind the wall). The clips lie flat in the panel, so they print flat too.
-CLIP_W = 6.0               # clip width (two 2 mm prongs with a 2 mm gap between them)
-CLIP_GAP = 2.0
-CLIP_BARB = 0.6            # how far each barb sticks out (what holds it)
-CLIP_RAMP = 1.5            # length of the lead-in slope at the tip
-CLIP_DEPTH = 9.0           # the prongs are cut this far into the panel (= springier)
-CLIP_RELIEF = 1.0          # width of the cuts beside the prongs
-CLIP_OUT = X_IN - HALF_IN + WALL + 0.3       # from the panel edge to the barbs (just past the wall)
+SIDE_LIP = 6.0             # the side walls wrap this far round the front of the panels
+CLIP_W = 4.8               # clip width (two 1.6 mm prongs with a 1.6 mm gap between them)
+CLIP_GAP = 1.6
+CLIP_BARB = 0.45           # how far each barb sticks out (what holds it)
+CLIP_RAMP = 1.2            # length of the lead-in slope at the tip
+CLIP_DEPTH = SIDE_LIP - 0.5   # the prongs are cut this far into the panel (hidden under the lip)
+CLIP_RELIEF = 0.8          # width of the cuts beside the prongs
+CLIP_OUT = X_IN - HALF_IN + (SIDE_T - POCKET_TOP) + 0.2   # from the panel edge to the barbs (in the pocket)
+POCKET_EXTRA = CLIP_BARB + 0.3              # the pocket is this much wider than the slot each side
 SLOT_PLAY = 0.15           # play around the clip in the wall slot (each side)
 
 
@@ -365,12 +371,12 @@ CLIPPED = {   # name: (placement, thickness, clip positions)
 }
 
 
-def wall_slots():
+def wall_slots(extra=0.0):
     """The slots in the side walls where the clips go through, in side profile (y, z)."""
     slots = []
     for (o, U, V), t, tabs in CLIPPED.values():
         N = (U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2], U[0] * V[1] - U[1] * V[0])
-        a = CLIP_W / 2 + SLOT_PLAY
+        a = CLIP_W / 2 + SLOT_PLAY + extra
         b = t / 2 + SLOT_PLAY
         for c in tabs:
             cy = o[1] + c * V[1] + t / 2 * N[1]
@@ -413,14 +419,15 @@ def _cleat(p, q, t, trim_a, trim_b):
     n = (-d[1], d[0])                       # (the profile goes round anticlockwise: left = inside)
     a = (p[0] + d[0] * trim_a, p[1] + d[1] * trim_a)
     b = (q[0] - d[0] * trim_b, q[1] - d[1] * trim_b)
+    t += 0.1                                # (a little play for the panel)
     return [(a[0] + n[0] * t, a[1] + n[1] * t), (b[0] + n[0] * t, b[1] + n[1] * t),
             (b[0] + n[0] * (t + RAIL), b[1] + n[1] * (t + RAIL)), (a[0] + n[0] * (t + RAIL), a[1] + n[1] * (t + RAIL))]
 
 
 def side(right):
-    """A side wall: the whole side profile, with ledges on the inside for the other
-    panels, slots for their click clips, and the two rails the back panel slides in.
-    Prints inside face up."""
+    """A side wall: the whole side profile, with a lip that wraps round the edges of the
+    other panels, ledges they rest on, slots + hidden pockets for their click clips,
+    and the two rails the back panel slides in. Prints inside face up."""
     m = Mesh()
     back0, back1 = (DEPTH, 0.0), (DEPTH, HEIGHT)
     front0 = (0.0, 0.0)
@@ -436,9 +443,18 @@ def side(right):
         rect(SLOT_Y1, WALL, DEPTH, HEIGHT),                                                  # rail behind it
     ]
     sw = (lambda poly: [(v, u) for u, v in poly]) if right else (lambda poly: poly)
-    m.plate(sw(SIDE_OUTLINE), [sw(sl) for sl in wall_slots()], 0.0, WALL, (0, 0, 0), X, Y)
+    # three layers: a closed outside skin, the clip pockets, and the slots on the inside
+    m.plate(sw(SIDE_OUTLINE), [], 0.0, SIDE_SKIN, (0, 0, 0), X, Y)
+    m.plate(sw(SIDE_OUTLINE), [sw(sl) for sl in wall_slots(POCKET_EXTRA)], SIDE_SKIN - 0.01, POCKET_TOP, (0, 0, 0), X, Y)
+    m.plate(sw(SIDE_OUTLINE), [sw(sl) for sl in wall_slots()], POCKET_TOP - 0.01, SIDE_T, (0, 0, 0), X, Y)
     for sh in w_shapes:
-        m.plate(sw(sh), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)
+        m.plate(sw(sh), [], SIDE_T - 0.01, SIDE_T + RAIL, (0, 0, 0), X, Y)
+    # the lip round the front of the panels (hides their edges and the clips)
+    # (a C shape: outside edge all round, open at the back where the back panel goes)
+    inner = _grow(PROFILE, [0.1, 0.0, 0.1, 0.1, 0.1, 0.1])
+    o = SIDE_OUTLINE
+    lip = [o[2], o[3], o[4], o[5], o[0], o[1], inner[1], inner[0], inner[5], inner[4], inner[3], inner[2]]
+    m.plate(sw(lip), [], SIDE_T - 0.01, SIDE_T + SIDE_LIP, (0, 0, 0), X, Y)
     m.check("side")
     place = ((WIDTH / 2, 0, 0), Z, Y) if right else ((-WIDTH / 2, 0, 0), Y, Z)
     return m, place
@@ -695,14 +711,18 @@ def test_back_slot():
 
 
 def test_click():
-    """One clip on a strip of panel and a strip of side wall with its slot: push the
-    clip through the slot - it should click in and hold."""
+    """One clip on a strip of panel and a bit of side wall with its slot: push the clip
+    into the slot - it should click into the hidden pocket and hold."""
     m = Mesh()
     e = 0.0
     pts = [(-25.0, -10.0), (e, -10.0)] + _fork(e, 0.0) + [(e, 10.0), (-25.0, 10.0)]
     m.plate(pts, [], 0.0, WALL, (0, 0, 0), X, Y)
     a, b = CLIP_W / 2 + SLOT_PLAY, WALL / 2 + SLOT_PLAY
-    m.plate(rect(12.0, -12.0, 32.0, 12.0), [rect(22.0 - b, -a, 22.0 + b, a)], 0.0, WALL, (0, 0, 0), X, Y)
+    wall = rect(12.0, -12.0, 32.0, 12.0)                     # (a bit of side wall, inside face up)
+    m.plate(wall, [], 0.0, SIDE_SKIN, (0, 0, 0), X, Y)
+    m.plate(wall, [rect(22.0 - b, -a - POCKET_EXTRA, 22.0 + b, a + POCKET_EXTRA)], SIDE_SKIN - 0.01, POCKET_TOP,
+            (0, 0, 0), X, Y)
+    m.plate(wall, [rect(22.0 - b, -a, 22.0 + b, a)], POCKET_TOP - 0.01, SIDE_T, (0, 0, 0), X, Y)
     m.check("test click")
     return m
 
