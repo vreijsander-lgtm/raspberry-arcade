@@ -528,8 +528,39 @@ def roof():
     return m, CLIPPED["roof"][0]
 
 
+# engraved text on the back: a little built-in pixel font (5 x 7), so no font files are needed
+SIGN_TEXT = "MADE BY SANDER"
+SIGN_PIXEL = 1.3           # size of one font pixel (mm): letters are 9 mm high
+SIGN_DEPTH = 0.8           # how deep it is engraved
+SIGN_V = 50.0              # top of the text, up from the bottom of the back panel
+FONT = {
+    "M": ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+    "A": ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+    "D": ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+    "E": ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+    "B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+    "Y": ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
+    "S": ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+    "N": ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
+    "R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+    " ": ["00000"] * 7,
+}
+
+
+def _sign_rows():
+    """The text as rows of 0 / 1 (one font pixel each), with a 1 pixel border."""
+    rows = []
+    for r in range(7):
+        line = "0".join(FONT[c][r] for c in SIGN_TEXT)
+        rows.append("0" + line + "0")
+    blank = "0" * len(rows[0])
+    return [blank] + rows + [blank]
+
+
 def back_panel():
-    """Slides down into the rails; pull it up by the finger hole to open the cabinet."""
+    """Slides down into the rails; pull it up by the finger hole to open the cabinet.
+    "MADE BY SANDER" is engraved in the outside (it prints on the bed, mirrored, so it
+    reads the right way round from behind the cabinet)."""
     m = Mesh()
     half = X_IN - 0.2
     top = HEIGHT - WALL - 0.3
@@ -543,7 +574,28 @@ def back_panel():
             u = -45.0 + k * 45.0
             holes.append(rect(u - 18.0, v, u + 18.0, v + 5.0))
     holes.append(rect(-20.0, top - 22.0, 20.0, top - 10.0))                               # finger hole
-    m.plate(outline, holes, 0.0, PANEL_T, (0, 0, 0), X, Y)
+    # the engraving: the outside layer is open where the text is (built row by row)
+    rows = _sign_rows()
+    px = SIGN_PIXEL
+    width = len(rows[0]) * px
+    x0 = -width / 2                                 # left edge of the text, seen from behind
+    v_top = SIGN_V + px
+    box = rect(-width / 2, v_top - len(rows) * px, width / 2, v_top)
+    m.plate(outline, holes + [box], 0.0, SIGN_DEPTH, (0, 0, 0), X, Y)
+    for r, line in enumerate(rows):
+        v1 = v_top - r * px
+        c = 0
+        while c < len(line):                        # each run of plain (not engraved) pixels
+            if line[c] == "1":
+                c += 1
+                continue
+            c1 = c
+            while c1 < len(line) and line[c1] == "0":
+                c1 += 1
+            xa, xb = x0 + c * px, x0 + c1 * px      # seen from behind: u = -x (mirrored)
+            m.plate(rect(-xb, v1 - px, -xa, v1), [], 0.0, SIGN_DEPTH + 0.01, (0, 0, 0), X, Y)
+            c = c1
+    m.plate(outline, holes, SIGN_DEPTH, PANEL_T, (0, 0, 0), X, Y)
     m.check("back panel")
     return m, ((0, SLOT_Y0 + 0.2 + PANEL_T, WALL), X, Z)
 
