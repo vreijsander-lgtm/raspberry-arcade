@@ -73,7 +73,7 @@ CLEAR = 0.5                # play around the screen
 
 # control deck
 DECK_T = 2.0               # deck plate (2 mm like joystick.stl) ...
-DOUBLER_T = 2.0            # ... with a second plate under it (cut out around the controls)
+DOUBLER_T = 2.0            # ... with a second plate under it (flat, only the holes go through)
 JOY_X = -45.0              # joystick centre (x) ...
 JOY_HOLE = 22.0
 JOY_SCREW, JOY_SCREW_DX = 3.5, 16.75
@@ -498,9 +498,8 @@ def deck():
     # top layer (on the bed): wide recesses so the joystick screw heads sit flush
     m.plate(out, holes + heads, 0.0, JOY_HEAD_DEPTH, (0, 0, 0), X, Y)
     m.plate(out, holes + screws, JOY_HEAD_DEPTH - 0.01, DECK_T, (0, 0, 0), X, Y)
-    # the doubler under it: open around the joystick (its plate is 50 x 50) and the button nuts
-    d_holes = [rect(-JOY_X - 27, s - 27, -JOY_X + 27, s + 27)] + [circle(-bx, s, BUTTON_HOLE + 6) for bx in BUTTON_X]
-    m.plate(out, d_holes, DECK_T - 0.01, DECK_TOTAL, (0, 0, 0), X, Y)
+    # the doubler under it: flat, with only the same holes going through
+    m.plate(out, holes + screws, DECK_T - 0.01, DECK_TOTAL, (0, 0, 0), X, Y)
     m.check("deck")
     return m, CLIPPED["deck"][0]                              # N = -x X deck = down into the cabinet
 
