@@ -199,6 +199,7 @@ picade/
 ├── glowbug/       Glowbug
 ├── pulsar/        Pulsar
 ├── startoss/      Star Toss
+├── cabinet/       3D-printable cabinet (STL files + make_cabinet.py that makes them)
 ├── update/        the tool that updates your Pis from your PC (runs on the PC)
 └── pi-tetris/     the old first version (Tetris only), not used by the arcade
 ```
