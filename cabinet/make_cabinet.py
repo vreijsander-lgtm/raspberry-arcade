@@ -81,7 +81,7 @@ CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
 PI_X0 = -80.0              # left edge of the board (x)
-PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.5
+PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
 # back panel
 PANEL_T = 3.0
