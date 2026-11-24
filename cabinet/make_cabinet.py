@@ -7,10 +7,14 @@ Picade mini arcade cabinet - makes the STL files to 3D print.
 (needs only plain Python 3, no extra packages). All sizes in mm.
 
 The cabinet is a kit of flat panels, each printed lying flat (no supports) and
-small enough for a 256 x 256 mm bed (BED below):
+small enough for a 256 x 256 mm bed (BED below). It CLICKS together, no glue or
+screws: the panels have springy arrow clips on both side edges that snap through
+the slots in the side walls. Put the panels into one side wall (they rest on its
+ledges), then press the other side wall on until every clip clicks. To take it
+apart, squeeze the two prongs of a clip together and pull the wall off.
     cabinet_side_left.stl / cabinet_side_right.stl
-                             the two sides; the ledges on the inside are where the
-                             other panels go (glue them on), plus the back panel rails
+                             the two sides: slots for the clips, ledges the panels
+                             rest on, and the rails for the back panel
     cabinet_base.stl         the bottom, with the Raspberry Pi standoffs
     cabinet_front.stl        the front below the controls
     cabinet_deck.stl         the control deck: joystick + 2 button holes (prints top down)
@@ -20,6 +24,8 @@ small enough for a 256 x 256 mm bed (BED below):
     cabinet_back_panel.stl   the back: slides UP out of the rails to open it
 
 Test prints, to check the sizes first (quick, small):
+    test_click.stl           one clip + a bit of side wall with its slot: it should
+                             click in and hold (tell me if it's too tight / loose)
     test_controls.stl        joystick holes + one button hole, in a strip of deck
     test_screen.stl          a template of the screen board: lay it on the front of the
                              screen - the window should frame the picture and the holes
@@ -311,6 +317,94 @@ DECK_TOTAL = DECK_T + DOUBLER_T
 FACE_START = 1.5                            # the face starts this far up, resting on the deck
 
 
+# ---- click system: every panel has springy arrow clips on both side edges that snap
+# through slots in the side walls (prongs squeeze together going in, the barbs click
+# out behind the wall). The clips lie flat in the panel, so they print flat too.
+CLIP_W = 6.0               # clip width (two 2 mm prongs with a 2 mm gap between them)
+CLIP_GAP = 2.0
+CLIP_BARB = 0.6            # how far each barb sticks out (what holds it)
+CLIP_RAMP = 1.5            # length of the lead-in slope at the tip
+CLIP_DEPTH = 9.0           # the prongs are cut this far into the panel (= springier)
+CLIP_RELIEF = 1.0          # width of the cuts beside the prongs
+CLIP_OUT = X_IN - HALF_IN + WALL + 0.3       # from the panel edge to the barbs (just past the wall)
+SLOT_PLAY = 0.15           # play around the clip in the wall slot (each side)
+
+
+def _fork(e, c):
+    """Outline points of one clip on a panel edge at u = e, centred at v = c (going up in v)."""
+    W, g, r, D, b = CLIP_W, CLIP_GAP, CLIP_RELIEF, CLIP_DEPTH, CLIP_BARB
+    o, tip = e + CLIP_OUT, e + CLIP_OUT + CLIP_RAMP
+    return [(e, c - W / 2 - r), (e - D, c - W / 2 - r), (e - D, c - W / 2), (o, c - W / 2),
+            (o, c - W / 2 - b), (tip, c - W / 2 + 0.3), (tip, c - g / 2), (e - D + 1.0, c - g / 2),
+            (e - D + 1.0, c + g / 2), (tip, c + g / 2), (tip, c + W / 2 - 0.3), (o, c + W / 2 + b),
+            (o, c + W / 2), (e - D, c + W / 2), (e - D, c + W / 2 + r), (e, c + W / 2 + r)]
+
+
+def clip_outline(v0, v1, tabs, half=None):
+    """A panel outline from v0 to v1, as wide as the inside of the cabinet, with clips
+    on both side edges at the heights in tabs."""
+    e = HALF_IN if half is None else half
+    pts = [(-e, v0), (e, v0)]
+    for c in sorted(tabs):
+        pts += _fork(e, c)
+    pts += [(e, v1), (-e, v1)]
+    for c in sorted(tabs, reverse=True):
+        pts += [(-u, v) for u, v in reversed(_fork(e, c))]
+    return pts
+
+
+# where the panels go, and where their clips are (v along the panel)
+FRONT_TOP = FRONT_H - DECK_TOTAL / DECK_DIR[1] - 0.3          # the deck rests on the front
+ROOF_V0 = FACE_TOP[0] + 3.2
+CLIPPED = {   # name: (placement, thickness, clip positions)
+    "base": (((0, 0, 0), X, Y), WALL, (30.0, 105.0, 150.0)),
+    "front": (((0, WALL, 0), X, Z), WALL, ((WALL + FRONT_TOP) / 2,)),
+    "deck": (((0, 0, FRONT_H), NX, DECK_DIR), DECK_TOTAL, (15.0, DECK_LEN - 15.0)),
+    "face": (((0, DECK_BACK[0], DECK_BACK[1]), NX, FACE_DIR), WALL, (8.0, FACE_LEN - 6.0)),
+    "roof": (((0, 0, HEIGHT - WALL), X, Y), WALL, (ROOF_V0 + 10.0, SLOT_Y0 - 10.0)),
+}
+
+
+def wall_slots():
+    """The slots in the side walls where the clips go through, in side profile (y, z)."""
+    slots = []
+    for (o, U, V), t, tabs in CLIPPED.values():
+        N = (U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2], U[0] * V[1] - U[1] * V[0])
+        a = CLIP_W / 2 + SLOT_PLAY
+        b = t / 2 + SLOT_PLAY
+        for c in tabs:
+            cy = o[1] + c * V[1] + t / 2 * N[1]
+            cz = o[2] + c * V[2] + t / 2 * N[2]
+            slots.append([(cy + sa * a * V[1] + sb * b * N[1], cz + sa * a * V[2] + sb * b * N[2])
+                          for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
+    return slots
+
+
+SIDE_RIM = 3.0             # the side walls stick out this far past the panels (front, top, bottom)
+
+
+def _grow(poly, offsets):
+    """Move each edge of an anticlockwise outline outwards by its offset."""
+    lines = []
+    for i in range(len(poly)):
+        (ay, az), (by, bz) = poly[i], poly[(i + 1) % len(poly)]
+        ln = math.hypot(by - ay, bz - az)
+        n = ((bz - az) / ln, -(by - ay) / ln)              # outward (right of the direction)
+        o = offsets[i]
+        lines.append(((ay + n[0] * o, az + n[1] * o), (by - ay, bz - az)))
+    pts = []
+    for i in range(len(lines)):
+        (p1, d1), (p2, d2) = lines[i - 1], lines[i]
+        den = d1[0] * d2[1] - d1[1] * d2[0]
+        t = ((p2[0] - p1[0]) * d2[1] - (p2[1] - p1[1]) * d2[0]) / den
+        pts.append((p1[0] + d1[0] * t, p1[1] + d1[1] * t))
+    return pts
+
+
+# the side wall outline: the profile grown by the rim, except at the back (back panel)
+SIDE_OUTLINE = _grow(PROFILE, [SIDE_RIM, 0.0, SIDE_RIM, SIDE_RIM, SIDE_RIM, SIDE_RIM])
+
+
 def _cleat(p, q, t, trim_a, trim_b):
     """A ledge along the profile edge p -> q, t mm in from the edge (where the panel ends)."""
     dy, dz = q[0] - p[0], q[1] - p[1]
@@ -325,7 +419,8 @@ def _cleat(p, q, t, trim_a, trim_b):
 
 def side(right):
     """A side wall: the whole side profile, with ledges on the inside for the other
-    panels and the two rails the back panel slides in. Prints inside face up."""
+    panels, slots for their click clips, and the two rails the back panel slides in.
+    Prints inside face up."""
     m = Mesh()
     back0, back1 = (DEPTH, 0.0), (DEPTH, HEIGHT)
     front0 = (0.0, 0.0)
@@ -341,7 +436,7 @@ def side(right):
         rect(SLOT_Y1, WALL, DEPTH, HEIGHT),                                                  # rail behind it
     ]
     sw = (lambda poly: [(v, u) for u, v in poly]) if right else (lambda poly: poly)
-    m.plate(sw(PROFILE), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(sw(SIDE_OUTLINE), [sw(sl) for sl in wall_slots()], 0.0, WALL, (0, 0, 0), X, Y)
     for sh in w_shapes:
         m.plate(sw(sh), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)
     m.check("side")
@@ -351,7 +446,7 @@ def side(right):
 
 def base():
     m = Mesh()
-    m.plate(rect(-HALF_IN, 0, HALF_IN, DEPTH), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(clip_outline(0, DEPTH, CLIPPED["base"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
     # lip that keeps the bottom of the back panel in
     m.plate(rect(-HALF_IN, SLOT_Y0 - 2.0, HALF_IN, SLOT_Y0), [], WALL - 0.01, WALL + 3.0, (0, 0, 0), X, Y)
     # Raspberry Pi standoffs (USB / Ethernet end towards the back panel)
@@ -362,22 +457,21 @@ def base():
             m.plate(circle(hx, hy, PI_STANDOFF_D, 40), [circle(hx, hy, PI_SCREW, 24)],
                     WALL - 0.01, WALL + PI_STANDOFF_H, (0, 0, 0), X, Y)
     m.check("base")
-    return m, ((0, 0, 0), X, Y)
+    return m, CLIPPED["base"][0]
 
 
 def front():
     m = Mesh()
-    top = FRONT_H - DECK_TOTAL / DECK_DIR[1] - 0.3          # the deck rests on it
-    m.plate(rect(-HALF_IN, WALL, HALF_IN, top), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(clip_outline(WALL, FRONT_TOP, CLIPPED["front"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
     m.check("front")
-    return m, ((0, WALL, 0), X, Z)                            # N = X x Z = -y
+    return m, CLIPPED["front"][0]                             # N = X x Z = -y
 
 
 def deck():
     """The control deck, printed top side down (u is mirrored: u = -x)."""
     m = Mesh()
     s = CONTROL_S * DECK_LEN
-    out = rect(-HALF_IN, 0, HALF_IN, DECK_LEN + 3.5)
+    out = clip_outline(0, DECK_LEN + 3.5, CLIPPED["deck"][2])
     holes = [circle(-JOY_X, s, JOY_HOLE, 72), circle(-JOY_X - JOY_SCREW_DX, s, JOY_SCREW, 24),
              circle(-JOY_X + JOY_SCREW_DX, s, JOY_SCREW, 24)]
     holes += [circle(-bx, s, BUTTON_HOLE) for bx in BUTTON_X]
@@ -386,7 +480,7 @@ def deck():
     d_holes = [rect(-JOY_X - 27, s - 27, -JOY_X + 27, s + 27)] + [circle(-bx, s, BUTTON_HOLE + 6) for bx in BUTTON_X]
     m.plate(out, d_holes, DECK_T - 0.01, DECK_TOTAL, (0, 0, 0), X, Y)
     m.check("deck")
-    return m, ((0, 0, FRONT_H), NX, DECK_DIR)                 # N = -x X deck = down into the cabinet
+    return m, CLIPPED["deck"][0]                              # N = -x X deck = down into the cabinet
 
 
 def face():
@@ -398,16 +492,16 @@ def face():
     vc_s = (s0 + s1) / 2 + VIEW_OFFSET_L
     window = rect(vc_u - VIEW_W / 2 - 0.5, vc_s - VIEW_L / 2 - 0.5, vc_u + VIEW_W / 2 + 0.5, vc_s + VIEW_L / 2 + 0.5)
     holes = [window] + [circle(-hx, hs, SCREEN_SCREW, 32) for hx, hs in screen_holes()]
-    m.plate(rect(-HALF_IN, FACE_START, HALF_IN, FACE_LEN), holes, 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(clip_outline(FACE_START, FACE_LEN, CLIPPED["face"][2]), holes, 0.0, WALL, (0, 0, 0), X, Y)
     m.check("face")
-    return m, ((0, DECK_BACK[0], DECK_BACK[1]), NX, FACE_DIR)  # N = -x X face = into the cabinet
+    return m, CLIPPED["face"][0]                              # N = -x X face = into the cabinet
 
 
 def roof():
     m = Mesh()
-    m.plate(rect(-HALF_IN, FACE_TOP[0] + 3.2, HALF_IN, SLOT_Y0), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(clip_outline(ROOF_V0, SLOT_Y0, CLIPPED["roof"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
     m.check("roof")
-    return m, ((0, 0, HEIGHT - WALL), X, Y)
+    return m, CLIPPED["roof"][0]
 
 
 def back_panel():
@@ -600,7 +694,20 @@ def test_back_slot():
     return m
 
 
-TESTS = [("test_controls.stl", test_controls), ("test_screen.stl", test_screen),
+def test_click():
+    """One clip on a strip of panel and a strip of side wall with its slot: push the
+    clip through the slot - it should click in and hold."""
+    m = Mesh()
+    e = 0.0
+    pts = [(-25.0, -10.0), (e, -10.0)] + _fork(e, 0.0) + [(e, 10.0), (-25.0, 10.0)]
+    m.plate(pts, [], 0.0, WALL, (0, 0, 0), X, Y)
+    a, b = CLIP_W / 2 + SLOT_PLAY, WALL / 2 + SLOT_PLAY
+    m.plate(rect(12.0, -12.0, 32.0, 12.0), [rect(22.0 - b, -a, 22.0 + b, a)], 0.0, WALL, (0, 0, 0), X, Y)
+    m.check("test click")
+    return m
+
+
+TESTS = [("test_click.stl", test_click), ("test_controls.stl", test_controls), ("test_screen.stl", test_screen),
          ("test_pi_standoffs.stl", test_pi), ("test_back_slot.stl", test_back_slot)]
 
 
