@@ -50,7 +50,7 @@ import struct
 # Sizes you may want to change
 # ----------------------------------------------------------------------------
 WALL = 3.0                 # wall thickness
-WIDTH = 190.0              # outside width of the cabinet (x)
+WIDTH = 196.0              # outside width of the cabinet (x)
 DEPTH = 170.0              # outside depth (y, front = 0)
 FRONT_H = 40.0             # height of the front edge of the control deck
 DECK_BACK = (80.0, 52.0)   # (y, z) where the deck meets the screen face
@@ -58,12 +58,12 @@ FACE_TILT = 12.0           # screen face leans back this many degrees
 FACE_LEN = 152.0           # length of the screen face (bottom to top)
 
 # screen (landscape: the 164 mm side runs across, the 124 mm side up the face)
-SCREEN_W, SCREEN_L, SCREEN_T = 161.0, 107.0, 14.4   # (measured: the board is 161 x 107)
+SCREEN_W, SCREEN_L, SCREEN_T = 165.0, 102.0, 14.4   # (measured: the board is 165 x 102)
 # (the opening in the face is the whole board, so the whole screen fits in it)
 SCREEN_BOTTOM = 20.0       # gap from the bottom of the face to the screen board (= screen in the middle)
 # the screen's own mounting holes, from the centre of the board seen from the front
 # (x right, y up) - measured: 3 mm in from the left / right edge, 8 mm past the top / bottom edge
-_HX, _HY = SCREEN_W / 2 - 3.0, SCREEN_L / 2 + 8.0
+_HX, _HY = 154.0 / 2, 112.0 / 2   # measured: holes 154 apart (left-right), 112 apart (up-down)
 SCREEN_HOLES = [(-_HX, -_HY), (_HX, -_HY), (-_HX, _HY), (_HX, _HY)]
 SCREEN_SCREW = 2.7         # screw holes in the screen posts (M2.5, like the Pi)
 SCREEN_POST_H = 7.0        # the posts: from the face to the screen's screw holes ...
