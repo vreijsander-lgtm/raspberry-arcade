@@ -3,6 +3,7 @@ Screens, menus and drawing for Star Toss (the throwing game).
 This is a mixin like the other *_ui files: main.py's App inherits from it.
 """
 import math
+import os
 import random
 import time
 
@@ -19,6 +20,10 @@ STAR_COL = (255, 230, 120)
 POWER_COLS = {"multi": (80, 230, 255), "rocket": (255, 80, 60), "giant": (255, 160, 60),
               "tiny": (240, 90, 220), "bounce": (180, 140, 255), "throw": (120, 255, 150),
               "mystery": (255, 230, 120)}
+ART_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+CAPSULE_ART = ("multi", "rocket", "giant", "tiny", "mystery")     # capsules with a picture
+WALL_SCALE = 0.5                    # the asteroid wall picture is drawn at this size ...
+WALL_EDGE = 220                     # ... and its rock edge is this far across the picture
 LOW_SKY = (40, 60, 120)
 HIGH_SKY = (2, 3, 12)
 
@@ -118,6 +123,49 @@ class TossUI:
     # ------------------------------------------------------------------
     # The shaft
     # ------------------------------------------------------------------
+    def _st_art(self):
+        """The space pictures (loaded once). An empty dict if they can't be loaded:
+        then everything is drawn the old way."""
+        art = self.__dict__.get("_st_art_cache")
+        if art is not None:
+            return art
+        art = {}
+        try:
+            def load(name):
+                return pygame.image.load(os.path.join(ART_DIR, name + ".png")).convert_alpha()
+
+            bd = load("space_backdrop")
+            bd = pygame.transform.smoothscale(bd, (W, int(bd.get_height() * W / bd.get_width()))).convert()
+            bd.fill((205, 205, 215), special_flags=pygame.BLEND_MULT)     # a bit darker: the game stands out
+            art["sky"] = (bd, pygame.transform.flip(bd, False, True))
+            wl = load("asteroid_wall_left")
+            wl = pygame.transform.smoothscale(wl, (int(wl.get_width() * WALL_SCALE), int(wl.get_height() * WALL_SCALE)))
+            wl_f = pygame.transform.flip(wl, False, True)
+            art["wall_l"] = (wl, wl_f)
+            art["wall_r"] = (pygame.transform.flip(wl, True, False), pygame.transform.flip(wl_f, True, False))
+            pad = load("hover_pad")
+            art["pad"] = pygame.transform.smoothscale(pad, (132, int(pad.get_height() * 132 / pad.get_width())))
+            for kind in CAPSULE_ART:
+                c = load("capsule_" + kind)
+                art["cap_" + kind] = pygame.transform.smoothscale(c, (48, int(c.get_height() * 48 / c.get_width())))
+        except (pygame.error, FileNotFoundError, OSError):
+            art = {}
+        self.__dict__["_st_art_cache"] = art
+        return art
+
+    def _st_tiles(self, pair, offset, x):
+        """Fill the screen top to bottom with a picture, every other copy upside down
+        (so the copies join without a seam). offset = how far it has scrolled."""
+        img, flipped = pair
+        th = img.get_height()
+        k0 = int(math.floor(offset / th))
+        y = H - th + (offset - k0 * th)                     # bottom tile's top edge (its bottom is below the screen)
+        k = k0
+        while y > -th:
+            self.screen.blit(flipped if k % 2 else img, (x, int(y)))
+            y -= th
+            k += 1
+
     def _st_sky(self, f):
         """Sky colour for a height (0 = ground, 1 = deep space), cached in steps."""
         cache = self.__dict__.setdefault("_st_skies", {})
@@ -140,41 +188,16 @@ class TossUI:
         def sy(h):                                    # height -> screen y
             return GROUND_Y - (h - cam)
 
-        f = min(1.0, cam / 9000.0)
-        scr.blit(self._st_sky(f), (0, 0))
-        # stars appear as you get higher; clouds near the ground
-        rng = random.Random(3)
-        for _ in range(90):
-            x, y0, size = rng.uniform(0, W), rng.uniform(0, 3000), rng.choice((1, 1, 2))
-            y = (y0 + cam * 0.08) % 3000 - 1000
-            b = int(255 * min(1.0, f * 2.5) * (0.6 + 0.4 * math.sin(t * 2 + x)))
-            if 0 <= y < H and b > 10:
-                pygame.draw.rect(scr, (b, b, min(255, b + 20)), (int(x), int(y), size, size))
-        if cam < 3000:
-            a = int(70 * (1 - cam / 3000.0))
-            cl = self.__dict__.get("_st_cloud")
-            if cl is None:
-                cl = self.__dict__["_st_cloud"] = pygame.Surface((180, 50), pygame.SRCALPHA)
-                for i in range(5):
-                    pygame.draw.circle(cl, (255, 255, 255, 255), (30 + i * 30, 30 - (i % 2) * 8), 20)
-            cl.set_alpha(a)
-            for k in range(4):
-                y = sy(400 + k * 650) * 0.6 + 200
-                scr.blit(cl, (int((k * 170 + t * 8) % (W + 180) - 180), int(y)))
-            cl.set_alpha(None)
-        # the shaft walls with seams, lights and height marks
-        for wx0, wx1 in ((0, ts.WALL_L), (ts.WALL_R, W)):
-            pygame.draw.rect(scr, (52, 58, 74), (wx0, 0, wx1 - wx0, H))
-            pygame.draw.line(scr, (120, 130, 155), (ts.WALL_L if wx0 == 0 else ts.WALL_R, 0),
-                             (ts.WALL_L if wx0 == 0 else ts.WALL_R, H), 3)
-        seam0 = int(cam // 120) * 120
-        for h in range(seam0 - 120, int(cam + H + 240), 120):
-            y = sy(h)
-            pygame.draw.line(scr, (34, 38, 50), (0, y), (ts.WALL_L, y), 2)
-            pygame.draw.line(scr, (34, 38, 50), (ts.WALL_R, y), (W, y), 2)
-            on = (h // 120 + int(t * 2)) % 4 == 0
-            pygame.draw.circle(scr, (255, 200, 80) if on else (90, 70, 40), (ts.WALL_L - 10, int(y + 60)), 3)
-            pygame.draw.circle(scr, (255, 200, 80) if on else (90, 70, 40), (ts.WALL_R + 10, int(y + 60)), 3)
+        art = self._st_art()
+        if art:
+            # space: the backdrop drifts by slowly, the asteroid walls move with the shaft
+            self._st_tiles(art["sky"], cam * 0.15, 0)
+            wl = art["wall_l"][0]
+            x_l = ts.WALL_L - int(WALL_EDGE * WALL_SCALE)
+            self._st_tiles(art["wall_l"], cam, x_l)
+            self._st_tiles(art["wall_r"], cam, W - x_l - wl.get_width())
+        else:
+            self._draw_st_old_shaft(g, sy, t, cam)
         mark = ts.PX_PER_M * 25
         for h in range(int(cam // mark) * mark, int(cam + H + mark), mark):
             if h <= 0:
@@ -190,8 +213,8 @@ class TossUI:
         # the ground and the launcher
         gy = sy(0)
         if gy < H + 40:
-            pygame.draw.rect(scr, (30, 34, 46), (0, gy, W, H))
-            pygame.draw.line(scr, (140, 150, 175), (0, gy), (W, gy), 3)
+            pygame.draw.rect(scr, (26, 20, 58), (0, gy, W, H))
+            pygame.draw.line(scr, (120, 100, 210), (0, gy), (W, gy), 3)
             self.draw_launcher(g, sy, t)
         # helpers, stars, the astronaut
         for hp in g.helpers:
@@ -253,15 +276,38 @@ class TossUI:
             self.text(text, self.font_med, col, (px, int(sy(h) - age * 40)), "center")
         self.draw_toss_hud(g, t)
 
+    def _draw_st_old_shaft(self, g, sy, t, cam):
+        """The shaft without the space pictures (if they can't be loaded)."""
+        scr = self.screen
+        f = min(1.0, cam / 9000.0)
+        scr.blit(self._st_sky(f), (0, 0))
+        rng = random.Random(3)
+        for _ in range(90):
+            x, y0, size = rng.uniform(0, W), rng.uniform(0, 3000), rng.choice((1, 1, 2))
+            y = (y0 + cam * 0.08) % 3000 - 1000
+            b = int(255 * min(1.0, f * 2.5) * (0.6 + 0.4 * math.sin(t * 2 + x)))
+            if 0 <= y < H and b > 10:
+                pygame.draw.rect(scr, (b, b, min(255, b + 20)), (int(x), int(y), size, size))
+        for wx0, wx1 in ((0, ts.WALL_L), (ts.WALL_R, W)):
+            pygame.draw.rect(scr, (52, 58, 74), (wx0, 0, wx1 - wx0, H))
+            pygame.draw.line(scr, (120, 130, 155), (ts.WALL_L if wx0 == 0 else ts.WALL_R, 0),
+                             (ts.WALL_L if wx0 == 0 else ts.WALL_R, H), 3)
+
     def draw_launcher(self, g, sy, t):
         scr = self.screen
         hx, hy = int(ts.HUB[0]), int(sy(ts.HUB[1]))
         base = int(sy(0))
-        pygame.draw.polygon(scr, (70, 76, 96), [(hx - 60, base), (hx + 60, base), (hx + 26, hy + 30),
-                                                (hx - 26, hy + 30)])
-        pygame.draw.polygon(scr, (140, 150, 175), [(hx - 60, base), (hx + 60, base), (hx + 26, hy + 30),
-                                                   (hx - 26, hy + 30)], 2)
-        pygame.draw.rect(scr, (90, 96, 118), (hx - 14, hy, 28, 34))
+        pad = self._st_art().get("pad")
+        if pad is not None:                                 # a hover pad under the hub, bobbing a little
+            bob = int(3 * math.sin(t * 3))
+            pygame.draw.rect(scr, (90, 96, 118), (hx - 8, hy, 16, 22 + bob))
+            scr.blit(pad, (hx - pad.get_width() // 2, hy + 16 + bob))
+        else:
+            pygame.draw.polygon(scr, (70, 76, 96), [(hx - 60, base), (hx + 60, base), (hx + 26, hy + 30),
+                                                    (hx - 26, hy + 30)])
+            pygame.draw.polygon(scr, (140, 150, 175), [(hx - 60, base), (hx + 60, base), (hx + 26, hy + 30),
+                                                       (hx - 26, hy + 30)], 2)
+            pygame.draw.rect(scr, (90, 96, 118), (hx - 14, hy, 28, 34))
         spin = g.angle if g.phase == "spin" and g.hub == ts.HUB else t
         pygame.draw.circle(scr, (60, 64, 80), (hx, hy), 18)
         for k in range(3):                                  # the turning hub
@@ -414,6 +460,11 @@ class TossUI:
 
     def draw_toss_capsule(self, x, y, kind, t):
         """A power-up floating down on a little parachute: a glowing pill with its letter on it."""
+        img = self._st_art().get("cap_" + kind)
+        if img is not None:                                 # (the pill is 73 % of the way down the picture)
+            self.draw_aura(x, y, 26, POWER_COLS[kind], 40)
+            self.screen.blit(img, (int(x - img.get_width() / 2), int(y - img.get_height() * 0.73)))
+            return
         col = POWER_COLS[kind]
         if kind == "mystery":                                   # rainbow shimmer
             col = tuple(int(150 + 105 * math.sin(t * 4 + k * 2.1)) for k in range(3))
