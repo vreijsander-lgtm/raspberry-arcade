@@ -1,28 +1,38 @@
 """
 Picade mini arcade cabinet - makes the STL files to 3D print.
 
-    python make_cabinet.py          (needs only plain Python 3, no extra packages)
+    python make_cabinet.py            make all the STL files
+    python make_cabinet.py --check    ... and check that no parts are in each other's way
 
-Writes (all sizes in mm):
-    arcade_body.stl          the cabinet: sides, base, front, control deck, screen
-                             face with window, roof, screen holders, Pi standoffs
-    arcade_back_panel.stl    the back: slides UP out of the rails to open it
-    arcade_screen_clamp.stl  2 straps that hold the screen (print 2x, M3 screws)
+(needs only plain Python 3, no extra packages). All sizes in mm.
+
+The cabinet is a kit of flat panels, each printed lying flat (no supports) and
+small enough for a 256 x 256 mm bed (BED below):
+    cabinet_side_left.stl / cabinet_side_right.stl
+                             the two sides; the ledges on the inside are where the
+                             other panels go (glue them on), plus the back panel rails
+    cabinet_base.stl         the bottom, with the Raspberry Pi standoffs
+    cabinet_front.stl        the front below the controls
+    cabinet_deck.stl         the control deck: joystick + 2 button holes (prints top down)
+    cabinet_screen_face.stl  the front with the screen window and its screw holes
+                             (prints front down)
+    cabinet_roof.stl         the top
+    cabinet_back_panel.stl   the back: slides UP out of the rails to open it
+
+Test prints, to check the sizes first (quick, small):
+    test_controls.stl        joystick holes + one button hole, in a strip of deck
+    test_screen.stl          a template of the screen board: lay it on the front of the
+                             screen - the window should frame the picture and the holes
+                             should be over the screen's own screw holes (arrow = up)
+    test_pi_standoffs.stl    the four Pi standoffs: the Pi should sit on them
+    test_back_slot.stl       a bit of the back rails + a strip of panel: should slide
 
 Inside: a Raspberry Pi 4B on the base and the Elecrow 7" 1024x600 HDMI touch
 screen (RC070, 164 x 124 x 14.4 mm, picture 155 x 88.5 mm) mounted sideways
-(landscape - the long side across). On the control deck: a joystick hole
-made to match joystick.stl (22 mm hole + two 3.5 mm screw holes 33.5 mm apart,
-2 mm thick deck) and two standard 30 mm arcade button holes.
-
-PRINT the body lying on its side (a side wall flat on the bed): then nothing
-but the screen window and the round holes needs support. The side profile is
-about 170 x 201 mm and the body is 182 mm wide, so it fits a 220 x 220 mm bed
-(Ender 3, Prusa, Bambu Lab, ...). The back panel and the
-clamps print flat.
-
-All the sizes are at the top: CHECK THE SCREEN AGAINST YOUR OWN SCREEN before
-printing (Elecrow doesn't publish where the picture sits on the board).
+(landscape). It screws on from the front through the face into its own mounting
+holes (SCREEN_HOLES - CHECK THEM WITH test_screen.stl, they are a guess).
+The joystick hole matches joystick.stl (22 mm hole + two 3.5 mm screw holes
+33.5 mm apart, 2 mm thick deck); the buttons are standard 30 mm arcade buttons.
 """
 import math
 import os
@@ -45,6 +55,10 @@ VIEW_W, VIEW_L = 155.0, 88.5               # visible picture area (across, up)
 VIEW_OFFSET_X = 0.0        # picture centre left(-)/right(+) of the board centre - MEASURE
 VIEW_OFFSET_L = 0.0        # picture centre down(-)/up(+) from the board centre - MEASURE
 SCREEN_BOTTOM = 10.0       # gap from the bottom of the face to the screen board
+# the screen's own mounting holes, from the centre of the board seen from the front
+# (x right, y up) - A GUESS: check with test_screen.stl and change them
+SCREEN_HOLES = [(-78.5, -58.5), (78.5, -58.5), (-78.5, 58.5), (78.5, 58.5)]
+SCREEN_SCREW = 3.2         # hole size for the screen screws (M3; use 2.7 for M2.5)
 CLEAR = 0.5                # play around the screen
 
 # control deck
@@ -65,6 +79,7 @@ PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.5
 PANEL_T = 3.0
 SLOT = PANEL_T + 0.4       # the rail slot it slides in
 
+BED = 256.0                # print bed size: every piece must fit on it
 SEG = 96                   # segments in a circle
 
 
@@ -192,6 +207,7 @@ class Mesh:
     def __init__(self):
         self.tris = []          # ((x,y,z) x 3)
         self.shells = []        # (start, end) per closed piece
+        self.plates = []        # what each piece was made of (for the collision check)
 
     def plate(self, outline, holes, w0, w1, origin, U, V):
         """Extrude a flat shape (u, v) from w0 to w1 along N = U x V; place it at origin."""
@@ -205,6 +221,7 @@ class Mesh:
         # nudge every hole by a different tiny amount (< 0.01 mm), so no corners of
         # different holes line up exactly - that would confuse the triangulation
         holes = [[(u + (k + 1) * 1.3e-4, v + (k + 1) * 1.7e-4) for u, v in h] for k, h in enumerate(holes)]
+        self.plates.append((outline, holes, w0, w1, origin, U, V, N))
         poly = _bridge(outline, holes) if holes else outline
         for a, b, c in _earclip(poly):
             pa, pb, pc = poly[a], poly[b], poly[c]
@@ -278,122 +295,338 @@ def _screen_box():
     return (-SCREEN_W / 2 - CLEAR, s0, SCREEN_W / 2 + CLEAR, s0 + SCREEN_L + 2 * CLEAR)
 
 
-def body():
-    m = Mesh()
-    X, Y, Z = (1.0, 0, 0), (0, 1.0, 0), (0, 0, 1.0)
-    # side walls (the whole side profile)
-    for x0 in (-WIDTH / 2, X_IN):
-        m.plate(PROFILE, [], x0, x0 + WALL, (0, 0, 0), Y, Z)          # N = Y x Z = +x
-    # base
-    m.box(-X_IN - 0.5, 0, 0, X_IN + 0.5, DEPTH, WALL)
-    # front wall
-    m.box(-X_IN - 0.5, 0, 0, X_IN + 0.5, WALL, FRONT_H)
-
-    # control deck: (u across = x, s along the deck from the front edge), top = deck surface
-    def deck_plate(holes, w0, w1):
-        m.plate(rect(-X_IN - 0.5, 0, X_IN + 0.5, DECK_LEN + 1.0), holes, w0, w1,
-                (0, 0, FRONT_H), X, DECK_DIR)                         # N = X x DECK_DIR (up)
-    s = CONTROL_S * DECK_LEN
-    holes = [circle(JOY_X, s, JOY_HOLE, 72), circle(JOY_X - JOY_SCREW_DX, s, JOY_SCREW, 24),
-             circle(JOY_X + JOY_SCREW_DX, s, JOY_SCREW, 24)]
-    holes += [circle(bx, s, BUTTON_HOLE) for bx in BUTTON_X]
-    deck_plate(holes, -DECK_T, 0.0)
-    # the doubler plate under it: open around the joystick (its plate is 50 x 50) and the button nuts
-    d_holes = [rect(JOY_X - 27, s - 27, JOY_X + 27, s + 27)] + [circle(bx, s, BUTTON_HOLE + 6) for bx in BUTTON_X]
-    deck_plate(d_holes, -DECK_T - DOUBLER_T, -DECK_T + 0.01)
-
-    # screen face with the window
+def screen_holes():
+    """The screen's own mounting holes, seen from the front (x right, s up the face)."""
     u0, s0, u1, s1 = _screen_box()
-    vc_u = VIEW_OFFSET_X
-    vc_s = (s0 + s1) / 2 + VIEW_OFFSET_L
-    window = rect(vc_u - VIEW_W / 2 - 0.5, vc_s - VIEW_L / 2 - 0.5, vc_u + VIEW_W / 2 + 0.5, vc_s + VIEW_L / 2 + 0.5)
-    face_o = (0, DECK_BACK[0], DECK_BACK[1])
-    m.plate(rect(-X_IN - 0.5, -DECK_T - DOUBLER_T, X_IN + 0.5, FACE_LEN), [window], -WALL, 0.0,
-            face_o, X, FACE_DIR)                                      # N points out of the front
-    # screen holders on the inside: 4 corner guides + 4 screw bosses for the clamps
-    g, leg = 2.0, 16.0
-    w0, w1 = -WALL - SCREEN_T, -WALL + 0.01
-    for cu, cs, du, ds in ((u0, s0, -1, -1), (u1, s0, 1, -1), (u0, s1, -1, 1), (u1, s1, 1, 1)):
-        a_u, b_u = sorted((cu, cu + du * g))
-        a_s, b_s = sorted((cs, cs + ds * g))
-        L_u = sorted((cu + du * g, cu - du * leg))
-        L_s = sorted((cs + ds * g, cs - ds * leg))
-        m.plate(rect(L_u[0], a_s, L_u[1], b_s), [], w0, w1, face_o, X, FACE_DIR)   # along the edge
-        m.plate(rect(a_u, L_s[0], b_u, L_s[1]), [], w0, w1, face_o, X, FACE_DIR)   # up the side
-    for bu, bs in boss_points():
-        m.plate(circle(bu, bs, 7.0, 40), [circle(bu, bs, 2.6, 24)], w0, w1, face_o, X, FACE_DIR)
+    sc = (s0 + s1) / 2
+    return [(hx, sc + hy) for hx, hy in SCREEN_HOLES]
 
-    # roof (stops in front of the back panel slot, so the panel slides up and out)
-    m.box(-X_IN - 0.5, FACE_TOP[0], HEIGHT - WALL, X_IN + 0.5, SLOT_Y0, HEIGHT)
-    # back panel rails on both walls, and a lip on the base
-    for side in (-1, 1):
-        xa, xb = sorted((side * X_IN, side * (X_IN - RAIL)))
-        xa, xb = (xa - 0.5, xb) if side < 0 else (xa, xb + 0.5)
-        m.box(xa, SLOT_Y0 - 2.0, WALL - 0.01, xb, SLOT_Y0, HEIGHT - WALL + 0.01)    # in front of the panel
-        m.box(xa, SLOT_Y1, WALL - 0.01, xb, DEPTH, HEIGHT)                          # behind it
-    m.box(-X_IN - 0.5, SLOT_Y0 - 2.0, WALL - 0.01, X_IN + 0.5, SLOT_Y0, WALL + 3.0)
 
+# Every piece is built lying flat the way it prints (w = up from the bed) and has a
+# placement (origin, U, V) that puts it where it goes in the cabinet.
+X, Y, Z = (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)
+NX = (-1.0, 0.0, 0.0)
+HALF_IN = X_IN - 0.1                        # panels between the side walls (0.1 mm play each side)
+DECK_TOTAL = DECK_T + DOUBLER_T
+FACE_START = 1.5                            # the face starts this far up, resting on the deck
+
+
+def _cleat(p, q, t, trim_a, trim_b):
+    """A ledge along the profile edge p -> q, t mm in from the edge (where the panel ends)."""
+    dy, dz = q[0] - p[0], q[1] - p[1]
+    ln = math.hypot(dy, dz)
+    d = (dy / ln, dz / ln)
+    n = (-d[1], d[0])                       # (the profile goes round anticlockwise: left = inside)
+    a = (p[0] + d[0] * trim_a, p[1] + d[1] * trim_a)
+    b = (q[0] - d[0] * trim_b, q[1] - d[1] * trim_b)
+    return [(a[0] + n[0] * t, a[1] + n[1] * t), (b[0] + n[0] * t, b[1] + n[1] * t),
+            (b[0] + n[0] * (t + RAIL), b[1] + n[1] * (t + RAIL)), (a[0] + n[0] * (t + RAIL), a[1] + n[1] * (t + RAIL))]
+
+
+def side(right):
+    """A side wall: the whole side profile, with ledges on the inside for the other
+    panels and the two rails the back panel slides in. Prints inside face up."""
+    m = Mesh()
+    back0, back1 = (DEPTH, 0.0), (DEPTH, HEIGHT)
+    front0 = (0.0, 0.0)
+    rail_front = SLOT_Y0 - 2.0
+    shapes = [PROFILE]
+    w_shapes = [
+        _cleat(front0, back0, WALL, WALL + 0.3, DEPTH - rail_front + 0.3),                  # under the base edge... on it
+        _cleat(back1, FACE_TOP, WALL, DEPTH - rail_front + 0.3, 5.0),                        # under the roof
+        _cleat(FACE_TOP, DECK_BACK, WALL, 8.0, 8.0),                                         # behind the screen face
+        _cleat(DECK_BACK, (0.0, FRONT_H), DECK_TOTAL, 6.0, 6.0),                             # under the deck
+        _cleat((0.0, FRONT_H), front0, WALL, 8.0, 2 * WALL + 0.3),                           # behind the front
+        rect(rail_front, 2 * WALL + 0.3, SLOT_Y0, HEIGHT - WALL),                            # rail in front of the back panel
+        rect(SLOT_Y1, WALL, DEPTH, HEIGHT),                                                  # rail behind it
+    ]
+    sw = (lambda poly: [(v, u) for u, v in poly]) if right else (lambda poly: poly)
+    m.plate(sw(PROFILE), [], 0.0, WALL, (0, 0, 0), X, Y)
+    for sh in w_shapes:
+        m.plate(sw(sh), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)
+    m.check("side")
+    place = ((WIDTH / 2, 0, 0), Z, Y) if right else ((-WIDTH / 2, 0, 0), Y, Z)
+    return m, place
+
+
+def base():
+    m = Mesh()
+    m.plate(rect(-HALF_IN, 0, HALF_IN, DEPTH), [], 0.0, WALL, (0, 0, 0), X, Y)
+    # lip that keeps the bottom of the back panel in
+    m.plate(rect(-HALF_IN, SLOT_Y0 - 2.0, HALF_IN, SLOT_Y0), [], WALL - 0.01, WALL + 3.0, (0, 0, 0), X, Y)
     # Raspberry Pi standoffs (USB / Ethernet end towards the back panel)
-    py1 = SLOT_Y0 - 2.0 - 3.0                       # board's back edge (ports stick out ~2 mm)
+    py1 = SLOT_Y0 - 2.0 - 3.0
     py0 = py1 - 85.0
     for hx in (PI_X0 + 3.5, PI_X0 + 52.5):
         for hy in (py0 + 3.5, py0 + 61.5):
             m.plate(circle(hx, hy, PI_STANDOFF_D, 40), [circle(hx, hy, PI_SCREW, 24)],
                     WALL - 0.01, WALL + PI_STANDOFF_H, (0, 0, 0), X, Y)
-    m.check("body")
-    return m
+    m.check("base")
+    return m, ((0, 0, 0), X, Y)
 
 
-def boss_points():
+def front():
+    m = Mesh()
+    top = FRONT_H - DECK_TOTAL / DECK_DIR[1] - 0.3          # the deck rests on it
+    m.plate(rect(-HALF_IN, WALL, HALF_IN, top), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.check("front")
+    return m, ((0, WALL, 0), X, Z)                            # N = X x Z = -y
+
+
+def deck():
+    """The control deck, printed top side down (u is mirrored: u = -x)."""
+    m = Mesh()
+    s = CONTROL_S * DECK_LEN
+    out = rect(-HALF_IN, 0, HALF_IN, DECK_LEN + 3.5)
+    holes = [circle(-JOY_X, s, JOY_HOLE, 72), circle(-JOY_X - JOY_SCREW_DX, s, JOY_SCREW, 24),
+             circle(-JOY_X + JOY_SCREW_DX, s, JOY_SCREW, 24)]
+    holes += [circle(-bx, s, BUTTON_HOLE) for bx in BUTTON_X]
+    m.plate(out, holes, 0.0, DECK_T, (0, 0, 0), X, Y)
+    # the doubler under it: open around the joystick (its plate is 50 x 50) and the button nuts
+    d_holes = [rect(-JOY_X - 27, s - 27, -JOY_X + 27, s + 27)] + [circle(-bx, s, BUTTON_HOLE + 6) for bx in BUTTON_X]
+    m.plate(out, d_holes, DECK_T - 0.01, DECK_TOTAL, (0, 0, 0), X, Y)
+    m.check("deck")
+    return m, ((0, 0, FRONT_H), NX, DECK_DIR)                 # N = -x X deck = down into the cabinet
+
+
+def face():
+    """The screen face, printed front side down (u = -x). The screen screws on from the
+    front, through the holes, into its own mounting holes."""
+    m = Mesh()
     u0, s0, u1, s1 = _screen_box()
-    bu = SCREEN_W / 2 - 32.0                        # (clear of the corner guides)
-    return [(su * bu, s) for su in (-1, 1) for s in (s0 - 4.0, s1 + 4.0)]     # below / above the screen
+    vc_u = -VIEW_OFFSET_X
+    vc_s = (s0 + s1) / 2 + VIEW_OFFSET_L
+    window = rect(vc_u - VIEW_W / 2 - 0.5, vc_s - VIEW_L / 2 - 0.5, vc_u + VIEW_W / 2 + 0.5, vc_s + VIEW_L / 2 + 0.5)
+    holes = [window] + [circle(-hx, hs, SCREEN_SCREW, 32) for hx, hs in screen_holes()]
+    m.plate(rect(-HALF_IN, FACE_START, HALF_IN, FACE_LEN), holes, 0.0, WALL, (0, 0, 0), X, Y)
+    m.check("face")
+    return m, ((0, DECK_BACK[0], DECK_BACK[1]), NX, FACE_DIR)  # N = -x X face = into the cabinet
+
+
+def roof():
+    m = Mesh()
+    m.plate(rect(-HALF_IN, FACE_TOP[0] + 3.2, HALF_IN, SLOT_Y0), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.check("roof")
+    return m, ((0, 0, HEIGHT - WALL), X, Y)
 
 
 def back_panel():
-    """Flat on the bed: u = x across, v = height. Slides down into the rails."""
+    """Slides down into the rails; pull it up by the finger hole to open the cabinet."""
     m = Mesh()
     half = X_IN - 0.2
     top = HEIGHT - WALL - 0.3
     outline = [(-half, 0), (half, 0), (half, top), (-half, top)]
     holes = []
-    # the Pi's USB / Ethernet ports
-    holes.append(rect(PI_X0 - 1.0, PI_STANDOFF_H, PI_X0 + 57.0, PI_STANDOFF_H + 22.0))
-    # a notch for the power cable next to them
-    holes.append(rect(PI_X0 + 62.0, 4.0, PI_X0 + 74.0, 12.0))
-    # air vents
-    for row in range(6):
+    holes.append(rect(PI_X0 - 1.0, PI_STANDOFF_H, PI_X0 + 57.0, PI_STANDOFF_H + 22.0))   # Pi USB / Ethernet
+    holes.append(rect(PI_X0 + 62.0, 4.0, PI_X0 + 74.0, 12.0))                          # power cable notch
+    for row in range(6):                                                                  # air vents
         v = 60.0 + row * 18.0
         for k in range(3):
             u = -45.0 + k * 45.0
             holes.append(rect(u - 18.0, v, u + 18.0, v + 5.0))
-    # finger hole to pull it up
-    holes.append(rect(-20.0, top - 22.0, 20.0, top - 10.0))
-    m.plate(outline, holes, 0.0, PANEL_T, (0, 0, 0), (1, 0, 0), (0, 1, 0))
+    holes.append(rect(-20.0, top - 22.0, 20.0, top - 10.0))                               # finger hole
+    m.plate(outline, holes, 0.0, PANEL_T, (0, 0, 0), X, Y)
     m.check("back panel")
-    return m
+    return m, ((0, SLOT_Y0 + 0.2 + PANEL_T, WALL), X, Z)
 
 
-def screen_clamp():
-    """A strap from the boss below the screen to the one above it, across its back (print 2)."""
+DECK_BACK_3 = (0.0, DECK_BACK[0], DECK_BACK[1])
+FACE_N = (0.0, -math.cos(TILT), math.sin(TILT))    # out of the front of the screen face
+
+PIECES = [                                          # (file, how many to print, maker)
+    ("cabinet_side_left.stl", 1, lambda: side(False)),
+    ("cabinet_side_right.stl", 1, lambda: side(True)),
+    ("cabinet_base.stl", 1, base),
+    ("cabinet_front.stl", 1, front),
+    ("cabinet_deck.stl", 1, deck),
+    ("cabinet_screen_face.stl", 1, face),
+    ("cabinet_roof.stl", 1, roof),
+    ("cabinet_back_panel.stl", 1, back_panel),
+]
+
+
+def placed(mesh, place):
+    """The piece moved to where it goes in the cabinet (a list of triangles)."""
+    o, U, V = place
+    N = (U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2], U[0] * V[1] - U[1] * V[0])
+    return [tuple(tuple(o[i] + p[0] * U[i] + p[1] * V[i] + p[2] * N[i] for i in range(3)) for p in t)
+            for t in mesh.tris]
+
+
+def assembly():
+    """[(name, mesh, placement)] for every part in the cabinet."""
+    parts = []
+    for name, count, fn in PIECES:
+        m, pl = fn()
+        parts.append((name, m, pl))
+    return parts
+
+
+# ----------------------------------------------------------------------------
+# Check that no two parts are in each other's way once put together
+# ----------------------------------------------------------------------------
+def _frames(mesh, place):
+    """World frames of all the plates of a placed piece."""
+    o, U, V = place
+    N = (U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2], U[0] * V[1] - U[1] * V[0])
+
+    def to_world(p):
+        return tuple(o[i] + p[0] * U[i] + p[1] * V[i] + p[2] * N[i] for i in range(3))
+
+    def vec(v):
+        return tuple(v[0] * U[i] + v[1] * V[i] + v[2] * N[i] for i in range(3))
+
+    res = []
+    for outline, holes, w0, w1, po, pU, pV, pN in mesh.plates:
+        res.append((outline, holes, w0, w1, to_world(po), vec(pU), vec(pV), vec(pN)))
+    return res
+
+
+def _dist_to_edges(pt, poly):
+    best = 1e9
+    for i in range(len(poly)):
+        (ax, ay), (bx, by) = poly[i - 1], poly[i]
+        dx, dy = bx - ax, by - ay
+        L = dx * dx + dy * dy or 1e-12
+        t = max(0.0, min(1.0, ((pt[0] - ax) * dx + (pt[1] - ay) * dy) / L))
+        best = min(best, math.hypot(pt[0] - ax - t * dx, pt[1] - ay - t * dy))
+    return best
+
+
+def _solid_at(fr, p, margin=0.06):
+    outline, holes, w0, w1, o, U, V, N = fr
+    d = (p[0] - o[0], p[1] - o[1], p[2] - o[2])
+    w = d[0] * N[0] + d[1] * N[1] + d[2] * N[2]
+    if not (w0 + margin < w < w1 - margin):
+        return False
+    u = d[0] * U[0] + d[1] * U[1] + d[2] * U[2]
+    v = d[0] * V[0] + d[1] * V[1] + d[2] * V[2]
+    if not _inside((u, v), outline) or _dist_to_edges((u, v), outline) < margin:
+        return False
+    for h in holes:
+        if _inside((u, v), h) or _dist_to_edges((u, v), h) < margin:
+            return False
+    return True
+
+
+def _samples(fr, step=2.0):
+    outline, holes, w0, w1, o, U, V, N = fr
+    us = [p[0] for p in outline]
+    vs = [p[1] for p in outline]
+    pts = []
+    u = min(us) + 0.3
+    while u < max(us):
+        v = min(vs) + 0.3
+        while v < max(vs):
+            if _inside((u, v), outline) and not any(_inside((u, v), h) for h in holes):
+                for w in (w0 + 0.2, (w0 + w1) / 2, w1 - 0.2):
+                    pts.append(tuple(o[i] + u * U[i] + v * V[i] + w * N[i] for i in range(3)))
+            v += step
+        u += step
+    return pts
+
+
+def check_fit(parts):
+    """Sample each part and make sure no point is inside another part."""
+    frames = [(name, _frames(m, pl)) for name, m, pl in parts]
+    boxes = []
+    for name, m, pl in parts:
+        pts = [p for t in placed(m, pl) for p in t]
+        boxes.append([(min(p[i] for p in pts), max(p[i] for p in pts)) for i in range(3)])
+    problems = []
+    for a, (na, fa) in enumerate(frames):
+        pts = [p for fr in fa for p in _samples(fr)]
+        for b, (nb, fb) in enumerate(frames):
+            if a == b:
+                continue
+            bb = boxes[b]
+            near = [p for p in pts if all(bb[i][0] - 0.1 <= p[i] <= bb[i][1] + 0.1 for i in range(3))]
+            hits = [p for p in near if any(_solid_at(fr, p) for fr in fb)]
+            if hits:
+                problems.append((na, nb, len(hits), hits[0]))
+    return problems
+
+
+# ----------------------------------------------------------------------------
+# Test prints: small and quick, to check the sizes before printing the cabinet
+# ----------------------------------------------------------------------------
+def test_controls():
+    """A strip of deck (same thickness) with the joystick holes and one button hole."""
     m = Mesh()
-    pts = boss_points()
-    bu = (pts[1][1] - pts[0][1]) / 2                # half the distance between the screws
-    half = bu + 6.0
-    m.plate(rect(-half, -6.0, half, 6.0), [circle(-bu, 0, 3.4, 32), circle(bu, 0, 3.4, 32)],
-            0.0, 3.0, (0, 0, 0), (1, 0, 0), (0, 1, 0))
-    m.check("clamp")
+    holes = [circle(-25.0, 0, JOY_HOLE, 72), circle(-25.0 - JOY_SCREW_DX, 0, JOY_SCREW, 24),
+             circle(-25.0 + JOY_SCREW_DX, 0, JOY_SCREW, 24), circle(35.0, 0, BUTTON_HOLE)]
+    m.plate(rect(-55.0, -22.0, 60.0, 22.0), holes, 0.0, DECK_T, (0, 0, 0), X, Y)
+    m.check("test controls")
     return m
+
+
+def test_screen():
+    """A thin template the size of the screen board, with the picture window and the
+    screw holes: lay it on the front of the screen to see if everything lines up."""
+    m = Mesh()
+    w, l = SCREEN_W / 2, SCREEN_L / 2
+    window = rect(VIEW_OFFSET_X - VIEW_W / 2 - 0.5, VIEW_OFFSET_L - VIEW_L / 2 - 0.5,
+                  VIEW_OFFSET_X + VIEW_W / 2 + 0.5, VIEW_OFFSET_L + VIEW_L / 2 + 0.5)
+    holes = [window] + [circle(hx, hy, SCREEN_SCREW, 32) for hx, hy in SCREEN_HOLES]
+    m.plate(rect(-w, -l, w, l), holes, 0.0, 1.2, (0, 0, 0), X, Y)
+    # a little arrow pointing up (which way round it goes): a notch at the top edge
+    m.plate([(-6.0, l), (6.0, l), (0.0, l + 8.0)], [], 0.0, 1.2, (0, 0, 0), X, Y)
+    m.check("test screen")
+    return m
+
+
+def test_pi():
+    """The four Pi standoffs on a thin plate: the Pi should sit on them, holes lined up."""
+    m = Mesh()
+    m.plate(rect(-6.0, -6.0, 55.0, 67.0), [rect(8.0, 10.0, 41.0, 51.0)], 0.0, 1.6, (0, 0, 0), X, Y)
+    for hx in (0.0, 49.0):
+        for hy in (0.0, 58.0):
+            m.plate(circle(hx, hy, PI_STANDOFF_D, 40), [circle(hx, hy, PI_SCREW, 24)],
+                    1.59, 1.6 + PI_STANDOFF_H, (0, 0, 0), X, Y)
+    m.check("test pi")
+    return m
+
+
+def test_back_slot():
+    """A short piece of the back panel rails and a strip of panel: the strip should slide
+    in and out easily without wobbling."""
+    m = Mesh()
+    L = 30.0
+    m.plate(rect(0, 0, L, 2.0 + SLOT + RAIL), [], 0.0, WALL, (0, 0, 0), X, Y)                # wall
+    m.plate(rect(0, 0, L, 2.0), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)               # front rail
+    m.plate(rect(0, 2.0 + SLOT, L, 2.0 + SLOT + RAIL), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)
+    m.plate(rect(L + 6.0, 0, L + 6.0 + 25.0, 25.0), [], 0.0, PANEL_T, (0, 0, 0), X, Y)      # panel strip
+    m.check("test slot")
+    return m
+
+
+TESTS = [("test_controls.stl", test_controls), ("test_screen.stl", test_screen),
+         ("test_pi_standoffs.stl", test_pi), ("test_back_slot.stl", test_back_slot)]
 
 
 def main():
+    import sys
     here = os.path.dirname(os.path.abspath(__file__))
-    for name, fn in (("arcade_body.stl", body), ("arcade_back_panel.stl", back_panel),
-                     ("arcade_screen_clamp.stl", screen_clamp)):
+    for old in ("arcade_body.stl", "arcade_back_panel.stl", "arcade_screen_clamp.stl", "cabinet_screen_clamp.stl"):
+        if os.path.exists(os.path.join(here, old)):
+            os.remove(os.path.join(here, old))
+    for name, count, fn in PIECES:
+        m, _ = fn()
+        m.save(os.path.join(here, name))
+        b = m.bounds()
+        size = [hi - lo for lo, hi in b]
+        fits = max(size[0], size[1]) <= BED and min(size[0], size[1]) <= BED and size[2] <= BED
+        print("%-28s print %dx  %5.1f x %5.1f x %5.1f mm  %s" % (name, count, *size, "" if fits else "TOO BIG FOR THE BED"))
+    for name, fn in TESTS:
         m = fn()
         m.save(os.path.join(here, name))
         b = m.bounds()
-        print("%-26s %6d triangles  %5.1f x %5.1f x %5.1f mm" % (name, len(m.tris), *(hi - lo for lo, hi in b)))
+        print("%-28s test     %5.1f x %5.1f x %5.1f mm" % (name, *(hi - lo for lo, hi in b)))
+    if "--check" in sys.argv:
+        problems = check_fit(assembly())
+        for na, nb, n, p in problems:
+            print("CLASH: %s goes into %s (%d points, e.g. at %.1f %.1f %.1f)" % (na, nb, n, *p))
+        print("fit check:", "OK - nothing in the way" if not problems else "%d clashes" % len(problems))
 
 
 if __name__ == "__main__":
