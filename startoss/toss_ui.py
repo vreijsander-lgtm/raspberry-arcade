@@ -95,7 +95,7 @@ class TossUI:
         g.update(dt, "left" in held, "right" in held, "button2" in held,
                  self.__dict__.pop("_st_presses", []))
         if g.game_over:
-            self.finish_run("toss", g, sum(g.heights), len(g.heights), "st_over")
+            self.finish_run("toss", g, int(round(sum(g.heights))), len(g.heights), "st_over")
 
     # ------------------------------------------------------------------
     # Screens
@@ -116,7 +116,7 @@ class TossUI:
         self.screen.blit(self.overlay, (0, 0))
         g = self.game
         self.draw_menu(self.menus["st_over"], "GAME OVER",
-                       lines=["SCORE  %d" % g.score,
+                       lines=["TOTAL  %d M" % g.score,
                               " + ".join("%d" % m for m in g.heights) + " M",
                               "BEST THROW  %d M" % max(g.heights or [0])], top=360)
 
@@ -216,22 +216,18 @@ class TossUI:
             pygame.draw.rect(scr, (26, 20, 58), (0, gy, W, H))
             pygame.draw.line(scr, (120, 100, 210), (0, gy), (W, gy), 3)
             self.draw_launcher(g, sy, t)
-        # helpers, stars, the astronaut
+        # helpers, capsules, the astronauts
         for hp in g.helpers:
             y = sy(hp["h"])
-            if -60 < y < H + 60:
-                self.draw_helper(hp, y, t)
-        for s in g.stars:
-            y = sy(s["h"])
-            if -30 < y < H + 30:
-                self.draw_bonus_star(s["x"], y, t, 0.0)
+            if -80 < y < H + 80:
+                self.draw_helper(g, hp, sy, t)
         for cp in g.capsules:
             y = sy(cp["h"])
             if -30 < y < H + 30:
                 self.draw_toss_capsule(cp["x"], y, cp["kind"], t)
-        if g.phase == "spin":
-            hx, hy = g.hub[0], sy(g.hub[1])
-            pygame.draw.line(scr, (200, 220, 255), (hx, hy), (g.x, sy(g.h)), 3)
+        if g.phase in ("ready", "spin"):                    # the launcher's arm
+            hx, hh = g.hub()
+            pygame.draw.line(scr, (200, 220, 255), (hx, sy(hh)), (g.x, sy(g.h)), 4)
         if g.phase == "fly" and g.pups:
             lead = max(g.pups, key=lambda q: q["h"])
             for i, p in enumerate(g.pups):
@@ -255,18 +251,14 @@ class TossUI:
                         a.midbottom = (int(p["x"]), int(y - r * 0.8))
                         pygame.draw.rect(scr, (110, 115, 130), a, border_radius=3)
                         pygame.draw.rect(scr, (200, 205, 220), a, 2, border_radius=3)
-                    if p["bounce"]:
-                        pygame.draw.circle(scr, POWER_COLS["bounce"], (int(p["x"]), int(y)), int(r + 6), 2)
-        elif g.phase != "fly":
-            self.draw_pup(g.x, sy(g.h), g.angle if g.phase == "spin" else 0, 0, -1, t)
-        if g.phase == "spin":
-            self.draw_throw_arrow(g, sy, t)
+        elif g.phase in ("ready", "spin"):
+            self.draw_pup(g.x, sy(g.h), g.angle, 0, -1, t)
         for kind, x, h, age, max_age in g.effects:
             k = age / max_age
             y = sy(h)
             col = {"super": GOLD, "boost": HELPER_COL, "flat": (255, 160, 60), "clip": (150, 210, 255),
                    "star": (255, 230, 120), "release": (180, 220, 255), "power": (255, 190, 80),
-                   "anvil": (160, 165, 180), "land": (200, 210, 230)}.get(kind, WHITE)
+                   "anvil": (160, 165, 180), "land": (200, 210, 230), "wall": (190, 170, 255)}.get(kind, WHITE)
             pygame.draw.circle(scr, _mix(col, (20, 20, 40), k), (int(x), int(y)), int(12 + 50 * k),
                                max(1, int(4 * (1 - k))))
         for text, x, h, age in g.popups:
@@ -275,6 +267,7 @@ class TossUI:
                    "NICE BOUNCE!": (140, 255, 200), "TOO DIZZY!": (255, 120, 170)}.get(text, GOLD)
             self.text(text, self.font_med, col, (px, int(sy(h) - age * 40)), "center")
         self.draw_toss_hud(g, t)
+        self.draw_toss_snapshot(g)
 
     def _draw_st_old_shaft(self, g, sy, t, cam):
         """The shaft without the space pictures (if they can't be loaded)."""
@@ -294,58 +287,30 @@ class TossUI:
                              (ts.WALL_L if wx0 == 0 else ts.WALL_R, H), 3)
 
     def draw_launcher(self, g, sy, t):
+        """The launcher droid on its hover pad (the pad bobs, sways and tilts)."""
         scr = self.screen
-        hx, hy = int(ts.HUB[0]), int(sy(ts.HUB[1]))
-        base = int(sy(0))
+        hx, hh = g.hub()
+        hy = sy(hh)
+        px = ts.CENTRE + math.sin(g.t * ts.SWAY_SPEED * 0.6) * ts.PAD_SWAY
+        py = sy(ts.PAD_H + math.sin(g.t * ts.SWAY_SPEED) * ts.PAD_BOB)
+        tilt = math.degrees(g.pad_tilt())
+        pygame.draw.line(scr, (90, 96, 118), (px, py - 6), (hx, hy), 10)          # its body
         pad = self._st_art().get("pad")
-        if pad is not None:                                 # a hover pad under the hub, bobbing a little
-            bob = int(3 * math.sin(t * 3))
-            pygame.draw.rect(scr, (90, 96, 118), (hx - 8, hy, 16, 22 + bob))
-            scr.blit(pad, (hx - pad.get_width() // 2, hy + 16 + bob))
+        if pad is not None:
+            img = pygame.transform.rotozoom(pad, tilt, 1.0)
+            scr.blit(img, img.get_rect(center=(int(px), int(py + 18))))
         else:
-            pygame.draw.polygon(scr, (70, 76, 96), [(hx - 60, base), (hx + 60, base), (hx + 26, hy + 30),
-                                                    (hx - 26, hy + 30)])
-            pygame.draw.polygon(scr, (140, 150, 175), [(hx - 60, base), (hx + 60, base), (hx + 26, hy + 30),
-                                                       (hx - 26, hy + 30)], 2)
-            pygame.draw.rect(scr, (90, 96, 118), (hx - 14, hy, 28, 34))
-        spin = g.angle if g.phase == "spin" and g.hub == ts.HUB else t
-        pygame.draw.circle(scr, (60, 64, 80), (hx, hy), 18)
-        for k in range(3):                                  # the turning hub
-            a = spin + k * math.tau / 3
-            pygame.draw.line(scr, (200, 210, 230), (hx, hy), (hx + math.cos(a) * 15, hy + math.sin(a) * 15), 3)
-        glow = g.spin_power() if g.phase == "spin" and g.hub == ts.HUB else 0.0
-        pygame.draw.circle(scr, _mix((90, 170, 255), (255, 120, 60), glow), (hx, hy), 7)
+            pts = [(-60, 0), (60, 0), (40, 26), (-40, 26)]
+            a = math.radians(-tilt)
+            pygame.draw.polygon(scr, (70, 76, 96), [(px + x * math.cos(a) - y * math.sin(a),
+                                                     py + x * math.sin(a) + y * math.cos(a)) for x, y in pts])
+        pygame.draw.circle(scr, (60, 64, 80), (int(hx), int(hy)), 16)
         dz = g.dizziness()
-        if dz > ts.DIZZY_WARN:                              # getting dizzy: pink, with stars going round
-            pygame.draw.circle(scr, _mix((255, 120, 60), (255, 90, 200), dz), (hx, hy), 9, 3)
+        pygame.draw.circle(scr, _mix((90, 170, 255), (255, 90, 200), dz), (int(hx), int(hy)), 8)
+        if dz > ts.DIZZY_WARN:                              # getting dizzy: stars going round its head
             for k in range(3):
                 a = t * 6 + k * math.tau / 3
-                sx, sy_ = hx + math.cos(a) * 30, hy - 40 + math.sin(a) * 9
-                pygame.draw.circle(scr, GOLD, (int(sx), int(sy_)), 4)
-
-    def draw_throw_arrow(self, g, sy, t):
-        """While spinning: which way it would fly, and how hard (green = up)."""
-        dx, up = g.throw_dir()
-        x, y = g.x, sy(g.h)
-        good = up > 0.85
-        col = (110, 255, 140) if good else ((255, 200, 80) if up > 0.3 else (255, 80, 80))
-        n = 30 + 60 * g.spin_power()
-        ex, ey = x + dx * n, y - up * n
-        pygame.draw.line(self.screen, col, (x, y), (ex, ey), 3)
-        a = math.atan2(-up, dx)
-        pygame.draw.polygon(self.screen, col, [(ex + math.cos(a) * 10, ey + math.sin(a) * 10),
-                                               (ex + math.cos(a + 2.5) * 9, ey + math.sin(a + 2.5) * 9),
-                                               (ex + math.cos(a - 2.5) * 9, ey + math.sin(a - 2.5) * 9)])
-        # power meter
-        bar = pygame.Rect(60, H - 44, W - 120, 16)
-        pygame.draw.rect(self.screen, (20, 24, 50), bar, border_radius=6)
-        p = g.spin_power()
-        if p > 0:
-            fill = bar.copy()
-            fill.w = max(6, int(bar.w * p))
-            pygame.draw.rect(self.screen, _mix((90, 200, 255), (255, 110, 60), p), fill, border_radius=6)
-        pygame.draw.rect(self.screen, (140, 150, 200), bar, 2, border_radius=6)
-        self.text("POWER", self.font_tiny, WHITE, (bar.centerx, bar.centery), "center")
+                pygame.draw.circle(scr, GOLD, (int(hx + math.cos(a) * 28), int(hy - 30 + math.sin(a) * 8)), 4)
 
     def draw_pup(self, x, y, spin, look, vy, t, scale=1.0):
         """An astronaut pup: round white suit, a coloured backpack and
@@ -376,48 +341,26 @@ class TossUI:
                         math.pi * 1.1 if vy < 0 else 0.2, math.pi * 1.9 if vy < 0 else math.pi - 0.2, 1)
         pygame.draw.circle(scr, (255, 255, 255), (hx - hr // 2, hy - hr // 2), max(1, int(2 * s)))
 
-    def draw_bonus_star(self, x, y, t, age):
-        if age > 7.0 and int(t * 10) % 2:                   # blinks before it goes
-            return
-        r = ts.STAR_R + 3 * math.sin(t * 5)
-        self.draw_aura(x, y, int(r + 12), STAR_COL, 50)
-        pts = []
-        for i in range(10):
-            a = -math.pi / 2 + i * math.pi / 5 + t * 1.5
-            d = r if i % 2 == 0 else r * 0.45
-            pts.append((x + math.cos(a) * d, y + math.sin(a) * d))
-        pygame.draw.polygon(self.screen, STAR_COL, pts)
-        pygame.draw.polygon(self.screen, (255, 255, 255), pts, 1)
-
-    def draw_helper(self, hp, y, t):
-        """A droid on a ledge in the wall: green helpers throw you up, red grumpy ones swat."""
+    def draw_helper(self, g, hp, sy, t):
+        """A droid in the wall: it reaches out with its arms (what you bounce off)."""
         scr = self.screen
         left = hp["side"] == 0
         wall = ts.WALL_L if left else ts.WALL_R
-        x = ts.HELPER_X[hp["side"]]
         d = 1 if left else -1
-        y = int(y)
-        pygame.draw.rect(scr, (110, 118, 140), (min(wall, wall + d * 44), y + 14, 44, 8))   # ledge
-        col = GRUMPY_COL if hp.get("kind") == "grumpy" else HELPER_COL
-        body = pygame.Rect(0, 0, 30, 30)
+        y = int(sy(hp["h"]))
+        x = wall + d * 14
+        pygame.draw.rect(scr, (110, 118, 140), (min(wall, wall + d * 34), y + 14, 34, 7))     # ledge
+        body = pygame.Rect(0, 0, 28, 28)
         body.midbottom = (x, y + 14)
         pygame.draw.rect(scr, (30, 34, 46), body.inflate(4, 4), border_radius=9)
-        pygame.draw.rect(scr, col, body, border_radius=8)
-        # visor eye(s)
-        pygame.draw.rect(scr, (20, 26, 40), (body.x + 5, body.y + 7, 20, 9), border_radius=4)
-        if hp.get("kind") == "grumpy":
-            pygame.draw.line(scr, (255, 220, 200), (body.x + 7, body.y + 9), (body.x + 13, body.y + 12), 2)
-            pygame.draw.line(scr, (255, 220, 200), (body.right - 7, body.y + 9), (body.right - 13, body.y + 12), 2)
-        else:
-            pygame.draw.circle(scr, (180, 255, 230), (body.centerx + d * 4, body.y + 11), 3)
-        # arms: ready (out towards the shaft), or swinging up after a throw
-        up = hp["anim"] > 0
-        for k in (-1, 1):
-            sx = body.centerx + k * 13
-            ex = sx + d * (8 if up else 18)
-            ey = body.y - 14 if up else body.y + 12
-            pygame.draw.line(scr, (200, 205, 220), (sx, body.y + 14), (ex, ey), 4)
-            pygame.draw.circle(scr, col, (int(ex), int(ey)), 4)
+        pygame.draw.rect(scr, HELPER_COL, body, border_radius=8)
+        pygame.draw.rect(scr, (20, 26, 40), (body.x + 4, body.y + 6, 20, 9), border_radius=4)
+        pygame.draw.circle(scr, (180, 255, 230), (body.centerx + d * 4, body.y + 10), 3)
+        sx, sh = g.snout(hp)                                # its hands
+        hx, hy = int(sx), int(sy(sh))
+        for k in (-7, 7):
+            pygame.draw.line(scr, (200, 205, 220), (body.centerx + d * 8, body.centery + k // 2), (hx, hy + k), 4)
+            pygame.draw.circle(scr, HELPER_COL, (hx, hy + k), 5)
 
     def draw_toss_hud(self, g, t):
         scr = self.screen
@@ -427,8 +370,8 @@ class TossUI:
         self.text("%d / %d" % (g.throw_no, g.throws), self.font_med, WHITE, (22, 32))
         self.text("HEIGHT", self.font_tiny, (140, 170, 230), (cx, 14), "midtop")
         self.text("%d M" % max(0, int(g.h / ts.PX_PER_M)), self.font_big, GOLD, (cx, 32), "midtop")
-        self.text("SCORE", self.font_tiny, (140, 170, 230), (W - 22, 14), "topright")
-        self.text(str(g.score), self.font_med, WHITE, (W - 22, 32), "topright")
+        self.text("TOTAL", self.font_tiny, (140, 170, 230), (W - 22, 14), "topright")
+        self.text("%d M" % g.score, self.font_med, WHITE, (W - 22, 32), "topright")
         shown = "   ".join("%d M" % m for m in g.heights)
         if shown:
             self.text(shown, self.font_tiny, (190, 180, 230), (22, 86), "midleft")
@@ -437,13 +380,12 @@ class TossUI:
         if g.phase == "fly" and len(g.pups) > 1:
             self.text("x%d ASTRONAUTS!" % len(g.pups), self.font_small, POWER_COLS["multi"], (22, H - 30), "midleft")
         if g.phase == "spin" and g.dizziness() > ts.DIZZY_WARN:
-            self.text("LET GO! IT'S GETTING DIZZY", self.font_small, (255, 120, 170), (cx, H - 70), "center")
-        if g.phase == "spin" and g.hub == ts.HUB:
-            if g.throw_no == 1 and g.held_t == 0:
-                self.draw_glass(pygame.Rect(30, 130, W - 60, 76), 12)
-                self.text("HOLD B2 TO SPIN - LET GO TO THROW", self.font_small, WHITE, (cx, 155), "center")
-                self.text("A SLIGHTLY SLANTED THROW REACHES THE HELPERS ON THE WALLS", self.font_tiny,
-                          (200, 190, 240), (cx, 184), "center")
+            self.text("THROW! IT'S GETTING DIZZY", self.font_small, (255, 120, 170), (cx, H - 40), "center")
+        if g.phase == "ready":
+            self.draw_glass(pygame.Rect(30, 130, W - 60, 76), 12)
+            self.text("PRESS B2 TO SPIN - PRESS AGAIN TO THROW", self.font_small, WHITE, (cx, 155), "center")
+            self.text("A SLIGHTLY SLANTED THROW REACHES THE HELPERS IN THE WALLS", self.font_tiny,
+                      (200, 190, 240), (cx, 184), "center")
         if g.phase == "fly" and g.throw_no == 1 and g.best_h < 900:
             self.text("HIT HELPERS STEEPLY - FLY THROUGH CAPSULES FOR POWER-UPS", self.font_tiny,
                       WHITE, (cx, 120), "center")
@@ -456,7 +398,28 @@ class TossUI:
                 self.text("TOO DIZZY!" if g.dizzy else "TOO LOW - 0 M", self.font_big, (255, 120, 170),
                           (cx, 462), "center")
             else:
-                self.text("%d M" % last, self.font_big, GOLD, (cx, 462), "center")
+                self.text("%.1f M" % last, self.font_big, GOLD, (cx, 462), "center")
+
+    def draw_toss_snapshot(self, g):
+        """The peak snapshot: a white flash, then a little photo card while it's frozen."""
+        if g.flash > 0:
+            fl = self.__dict__.get("_st_flash")
+            if fl is None:
+                fl = self.__dict__["_st_flash"] = pygame.Surface((W, H)).convert()
+                fl.fill((255, 255, 255))
+            fl.set_alpha(int(g.flash))
+            self.screen.blit(fl, (0, 0))
+        if g.photo and g.phase == "fly":
+            text = g.photo[0]
+            if g.freeze_t > 0:                              # big card in the middle while frozen
+                box = pygame.Rect(0, 0, 300, 90)
+                box.center = (W // 2, H // 2 - 120)
+                pygame.draw.rect(self.screen, (250, 250, 245), box, border_radius=6)
+                pygame.draw.rect(self.screen, (40, 40, 60), box.inflate(-16, -34), border_radius=4)
+                self.text("SNAPSHOT!", self.font_small, (40, 40, 60), (box.centerx, box.bottom - 10), "center")
+                self.text(text, self.font_med, GOLD, (box.centerx, box.centery - 8), "center")
+            else:                                           # then small in the corner
+                self.text(text, self.font_small, (250, 240, 210), (W - 22, H - 30), "midright")
 
     def draw_toss_capsule(self, x, y, kind, t):
         """A power-up floating down on a little parachute: a glowing pill with its letter on it."""
@@ -468,7 +431,7 @@ class TossUI:
         col = POWER_COLS[kind]
         if kind == "mystery":                                   # rainbow shimmer
             col = tuple(int(150 + 105 * math.sin(t * 4 + k * 2.1)) for k in range(3))
-        r = pygame.Rect(0, 0, ts.CAPSULE_W, ts.CAPSULE_H)
+        r = pygame.Rect(0, 0, 46, 24)
         r.center = (int(x), int(y))
         top = r.y - 30                                          # the parachute: a dome on strings
         dome = [(x + math.cos(a) * 24, top + 8 - math.sin(a) * 16)
@@ -484,7 +447,7 @@ class TossUI:
         if 0 < shine < r.w - 6:
             pygame.draw.line(self.screen, (255, 255, 255), (r.x + shine, r.y + 4),
                              (r.x + shine + 4, r.bottom - 4), 2)
-        self.text(ts.POWERUPS[kind][0], self.font_tiny, (25, 20, 35), r.center, "center")
+        self.text(ts.LABELS[kind], self.font_tiny, (25, 20, 35), r.center, "center")
 
     # ------------------------------------------------------------------
     # The start screen card icon and the menu background

@@ -343,43 +343,41 @@ top. SMASH works for both. Multiplayer games don't go on the scoreboard.
 
 ## 5d3. Star Toss (throwing game)
 
-Pick **STAR TOSS** in the games menu. At the bottom of a tall shaft a launcher droid swings
-your astronaut round on a tether.
+Pick **STAR TOSS** in the games menu. At the bottom of a tall space shaft a launcher droid on a
+bobbing hover pad holds your astronaut on its arm.
 
 | Button | In the game |
 |--------|-------------|
-| **Button 2 (hold)** | **spin**: the longer you hold, the faster (see the POWER bar) - but not too long, it gets **DIZZY** after about 3 seconds and drops you |
-| **Button 2 (let go)** | **throw**: it flies the way it was moving - let go when the arrow is **green** (pointing up) |
+| **Button 2 (press)** | **spin**: the droid starts swinging you round - faster and faster |
+| **Button 2 (press again)** | **throw**: you fly off the way you were moving (no aiming arrow - judge it by eye) |
 | **Button 1** | **menu** (pause, restart, scoreboard, main menu) |
 
-* Holding and letting go of Button 2 is the only control: once thrown, you can't steer.
-* **Green helper droids** stand on ledges in the walls, zig-zagging left / right and **always
-  exactly the same distance apart**. Touch one and it bounces you up and across to the other
-  wall straight away (you never stop). How hard depends on how you hit it:
-  * **angle** - coming in steep is good, a flat sideways slam is a **FLAT HIT**;
-  * **spot** - rising, hit its arms (not behind them near the wall: **UNDER-CLIP**);
-    falling, land on top of its head like a springboard;
+* Wait too long (3.4 seconds) and the droid gets **DIZZY** and drops you - a wasted throw.
+  The pad bobs and tilts, which shifts the angle a little every time. Once thrown, you can't steer.
+* **Helper droids** sit in the walls, left and right, every 64 m (a few metres up or down).
+  Touch one and it bounces you up and across straight away. How hard depends on:
+  * **angle** - steep is good, a flat sideways hit is a **FLAT HIT**;
+  * **spot** - rising, hit the front of its arms (behind them is an **UNDER-CLIP**);
+    falling, land on top of it like a springboard;
   * **speed** - rising fast carries on into the bounce.
-  A perfect hit is a **SUPER BOUNCE** (+50). Every bounce in a throw is a bit weaker, and
-  after a few the helpers aim you up the middle, so every throw comes down in the end.
-* **Power-up capsules** float down the shaft on parachutes - fly through one (it works on the
-  astronaut that touched it; all of the first five kinds turn up early in every throw):
+  A perfect hit is a **SUPER BOUNCE**. Every bounce is a bit weaker, and after 4 the helpers
+  send you up the middle, so every throw comes down in the end.
+* **Power-up capsules** drift down on parachutes - fly through one (it works on that astronaut;
+  all five turn up early in every throw):
 
   | Capsule | What it does |
   |---------|--------------|
-  | **x3** MULTI | that astronaut splits into three (up to 9) - the highest one counts |
-  | **R** ROCKET | a burst of rocket thrust straight up |
+  | **M** MULTI | that astronaut splits into three (up to 9) - the highest one counts |
+  | **R** ROCKET | a burst of rocket thrust |
   | **G** GIANT | bigger: easier to hit helpers, but heavier and slower |
   | **T** TINY | smaller: lighter and faster, but easy to miss helpers |
-  | **B** BOUNCE | the next time it hits the ground it bounces back up |
-  | **+1** THROW | an extra throw this game |
-  | **?** MYSTERY | a gamble: SPLIT + ROCKET, MEGA ROCKET... or an ANVIL / TINY ANVIL (heavy for a moment; it breaks off when you hit a helper) |
+  | **?** MYSTERY | SPLIT + ROCKET, MEGA ROCKET... or an ANVIL / TINY ANVIL (heavy for a moment; it breaks off at a helper) |
 
-* A throw is only over when the **last astronaut lands** back on the ground.
-* A game is **5 throws** (+ extra ones). Score: 10 points per metre of all throws, +10 per
-  bounce, +50 per star and per SUPER BOUNCE, +25 per power-up. A throw lower than 12 m counts
-  as 0. The top 10 is kept in `highscores_toss.json` (total metres next to the score).
-  Single player only for now.
+* Every time an astronaut reaches a new highest point the picture freezes for a moment: a
+  **SNAPSHOT** of the peak.
+* A throw is over when the **last astronaut is back down**.
+* A game is **5 throws**. The score is the heights of all 5 added up (in metres); a throw lower
+  than 12 m counts as 0. The top 10 is kept in `highscores_toss.json`. Single player only for now.
 
 ## 5e. Game modes
 
