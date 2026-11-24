@@ -74,6 +74,7 @@ DOUBLER_T = 2.0            # ... with a second plate under it (cut out around th
 JOY_X = -45.0              # joystick centre (x) ...
 JOY_HOLE = 22.0
 JOY_SCREW, JOY_SCREW_DX = 3.5, 16.75
+JOY_HEAD, JOY_HEAD_DEPTH = 5.2, 1.0   # recess for the joystick screw heads (5 mm, 1 mm high) - flush
 BUTTON_X = (16.0, 56.0)    # the two buttons (40 mm apart)
 BUTTON_HOLE = 30.0         # standard 30 mm arcade button (use 24.0 for 24 mm buttons)
 CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 = back)
@@ -488,10 +489,12 @@ def deck():
     m = Mesh()
     s = CONTROL_S * DECK_LEN
     out = clip_outline(0, DECK_LEN + 3.5, CLIPPED["deck"][2])
-    holes = [circle(-JOY_X, s, JOY_HOLE, 72), circle(-JOY_X - JOY_SCREW_DX, s, JOY_SCREW, 24),
-             circle(-JOY_X + JOY_SCREW_DX, s, JOY_SCREW, 24)]
-    holes += [circle(-bx, s, BUTTON_HOLE) for bx in BUTTON_X]
-    m.plate(out, holes, 0.0, DECK_T, (0, 0, 0), X, Y)
+    holes = [circle(-JOY_X, s, JOY_HOLE, 72)] + [circle(-bx, s, BUTTON_HOLE) for bx in BUTTON_X]
+    screws = [circle(-JOY_X - JOY_SCREW_DX, s, JOY_SCREW, 24), circle(-JOY_X + JOY_SCREW_DX, s, JOY_SCREW, 24)]
+    heads = [circle(-JOY_X - JOY_SCREW_DX, s, JOY_HEAD, 40), circle(-JOY_X + JOY_SCREW_DX, s, JOY_HEAD, 40)]
+    # top layer (on the bed): wide recesses so the joystick screw heads sit flush
+    m.plate(out, holes + heads, 0.0, JOY_HEAD_DEPTH, (0, 0, 0), X, Y)
+    m.plate(out, holes + screws, JOY_HEAD_DEPTH - 0.01, DECK_T, (0, 0, 0), X, Y)
     # the doubler under it: open around the joystick (its plate is 50 x 50) and the button nuts
     d_holes = [rect(-JOY_X - 27, s - 27, -JOY_X + 27, s + 27)] + [circle(-bx, s, BUTTON_HOLE + 6) for bx in BUTTON_X]
     m.plate(out, d_holes, DECK_T - 0.01, DECK_TOTAL, (0, 0, 0), X, Y)
@@ -663,9 +666,13 @@ def check_fit(parts):
 def test_controls():
     """A strip of deck (same thickness) with the joystick holes and one button hole."""
     m = Mesh()
-    holes = [circle(-25.0, 0, JOY_HOLE, 72), circle(-25.0 - JOY_SCREW_DX, 0, JOY_SCREW, 24),
-             circle(-25.0 + JOY_SCREW_DX, 0, JOY_SCREW, 24), circle(35.0, 0, BUTTON_HOLE)]
-    m.plate(rect(-55.0, -22.0, 60.0, 22.0), holes, 0.0, DECK_T, (0, 0, 0), X, Y)
+    holes = [circle(-25.0, 0, JOY_HOLE, 72), circle(35.0, 0, BUTTON_HOLE)]
+    screws = [circle(-25.0 - JOY_SCREW_DX, 0, JOY_SCREW, 24), circle(-25.0 + JOY_SCREW_DX, 0, JOY_SCREW, 24)]
+    heads = [circle(-25.0 - JOY_SCREW_DX, 0, JOY_HEAD, 40), circle(-25.0 + JOY_SCREW_DX, 0, JOY_HEAD, 40)]
+    strip = rect(-55.0, -22.0, 60.0, 22.0)
+    # (the screw head recesses on top, like the top of the deck)
+    m.plate(strip, holes + screws, 0.0, DECK_T - JOY_HEAD_DEPTH, (0, 0, 0), X, Y)
+    m.plate(strip, holes + heads, DECK_T - JOY_HEAD_DEPTH - 0.01, DECK_T, (0, 0, 0), X, Y)
     m.check("test controls")
     return m
 
