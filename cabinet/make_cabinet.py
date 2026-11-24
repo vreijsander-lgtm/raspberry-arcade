@@ -799,19 +799,117 @@ TESTS = [("test_click.stl", test_click), ("test_controls.stl", test_controls), (
          ("test_pi_standoffs.stl", test_pi), ("test_back_slot.stl", test_back_slot)]
 
 
+# ----------------------------------------------------------------------------
+# One Bambu Studio project with every part already laid out on its plates
+# ----------------------------------------------------------------------------
+PLATES = [                                          # what goes on each plate (front to back)
+    ["cabinet_side_left.stl"],
+    ["cabinet_side_right.stl", "cabinet_roof.stl"],
+    ["cabinet_base.stl", "cabinet_front.stl"],
+    ["cabinet_deck.stl", "cabinet_screen_face.stl"],
+    ["cabinet_back_panel.stl"],
+]
+PLATE_GAP = 8.0            # space between parts on one plate
+
+
+def _plate_origin(i, count):
+    """Where Bambu Studio puts plate i (plates in rows, 20 % apart, rows going -y)."""
+    v = math.sqrt(count)
+    cols = int(round(v)) + (1 if v > round(v) else 0)
+    stride = BED * 1.2
+    return (i % cols) * stride, -(i // cols) * stride
+
+
+def write_3mf(path, meshes):
+    """meshes: {file name: Mesh}. Writes a Bambu Studio project with one plate per PLATES entry."""
+    import zipfile
+    from xml.sax.saxutils import escape
+    objects, items, config = [], [], []
+    plates_xml = []
+    oid = 0
+    for pi, names in enumerate(PLATES):
+        ox, oy = _plate_origin(pi, len(PLATES))
+        sizes = []
+        for n in names:
+            b = meshes[n].bounds()
+            sizes.append((b, b[0][1] - b[0][0], b[1][1] - b[1][0]))
+        total = sum(sz[2] for sz in sizes) + PLATE_GAP * (len(sizes) - 1)
+        assert total <= BED and all(sz[1] <= BED for sz in sizes), "plate %d too full" % (pi + 1)
+        y = BED / 2 + total / 2                    # stack the parts from the back to the front
+        insts = []
+        for n, (b, w, d) in zip(names, sizes):
+            oid += 1
+            cx, cy = BED / 2, y - d / 2
+            y -= d + PLATE_GAP
+            # the mesh, centred on its own middle (x, y) with its bottom at z = 0
+            mx, my, mz = (b[0][0] + b[0][1]) / 2, (b[1][0] + b[1][1]) / 2, b[2][0]
+            index, verts, tris = {}, [], []
+            for t in meshes[n].tris:
+                ids = []
+                for p in t:
+                    q = (round(p[0] - mx, 4), round(p[1] - my, 4), round(p[2] - mz, 4))
+                    if q not in index:
+                        index[q] = len(verts)
+                        verts.append(q)
+                    ids.append(index[q])
+                if len(set(ids)) == 3:
+                    tris.append(ids)
+            vx = "".join('<vertex x="%g" y="%g" z="%g"/>' % v for v in verts)
+            tx = "".join('<triangle v1="%d" v2="%d" v3="%d"/>' % tuple(t) for t in tris)
+            objects.append('<object id="%d" name="%s" type="model"><mesh><vertices>%s</vertices>'
+                           '<triangles>%s</triangles></mesh></object>' % (oid, escape(n[:-4]), vx, tx))
+            items.append('<item objectid="%d" transform="1 0 0 0 1 0 0 0 1 %g %g 0" printable="1"/>'
+                         % (oid, ox + cx, oy + cy))
+            config.append('<object id="%d"><metadata key="name" value="%s"/><metadata key="extruder" value="1"/>'
+                          '<part id="1" subtype="normal_part"><metadata key="name" value="%s"/></part></object>'
+                          % (oid, escape(n[:-4]), escape(n[:-4])))
+            insts.append('<model_instance><metadata key="object_id" value="%d"/><metadata key="instance_id" '
+                         'value="0"/><metadata key="identify_id" value="%d"/></model_instance>' % (oid, 100 + oid))
+        plates_xml.append('<plate><metadata key="plater_id" value="%d"/><metadata key="plater_name" value="%s"/>'
+                          '<metadata key="locked" value="false"/>%s</plate>'
+                          % (pi + 1, escape(" + ".join(n[8:-4] for n in names)), "".join(insts)))
+    model = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+             '<model unit="millimeter" xml:lang="en-US" '
+             'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+             '<metadata name="Application">BambuStudio-01.10.00.00</metadata>'
+             '<metadata name="BambuStudio:3mfVersion">1</metadata>'
+             '<metadata name="Title">Picade arcade cabinet</metadata>'
+             '<resources>%s</resources><build>%s</build></model>' % ("".join(objects), "".join(items)))
+    settings = ('<?xml version="1.0" encoding="UTF-8"?>\n<config>%s%s</config>'
+                % ("".join(config), "".join(plates_xml)))
+    types = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+             '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+             '<Default Extension="config" ContentType="text/xml"/></Types>')
+    rels = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Target="/3D/3dmodel.model" Id="rel-1" '
+            'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", types)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("3D/3dmodel.model", model)
+        z.writestr("Metadata/model_settings.config", settings)
+
+
 def main():
     import sys
     here = os.path.dirname(os.path.abspath(__file__))
     for old in ("arcade_body.stl", "arcade_back_panel.stl", "arcade_screen_clamp.stl", "cabinet_screen_clamp.stl"):
         if os.path.exists(os.path.join(here, old)):
             os.remove(os.path.join(here, old))
+    made = {}
     for name, count, fn in PIECES:
         m, _ = fn()
+        made[name] = m
         m.save(os.path.join(here, name))
         b = m.bounds()
         size = [hi - lo for lo, hi in b]
         fits = max(size[0], size[1]) <= BED and min(size[0], size[1]) <= BED and size[2] <= BED
         print("%-28s print %dx  %5.1f x %5.1f x %5.1f mm  %s" % (name, count, *size, "" if fits else "TOO BIG FOR THE BED"))
+    write_3mf(os.path.join(here, "cabinet_all_plates.3mf"), made)
+    print("%-28s Bambu Studio project: %d plates" % ("cabinet_all_plates.3mf", len(PLATES)))
     for name, fn in TESTS:
         m = fn()
         m.save(os.path.join(here, name))
