@@ -10,15 +10,15 @@ Writes (all sizes in mm):
     arcade_screen_clamp.stl  2 straps that hold the screen (print 2x, M3 screws)
 
 Inside: a Raspberry Pi 4B on the base and the Elecrow 7" 1024x600 HDMI touch
-screen (RC070, 164 x 124 x 14.4 mm, picture 155 x 88.5 mm) mounted upright
-(portrait - the Picade games are tall). On the control deck: a joystick hole
+screen (RC070, 164 x 124 x 14.4 mm, picture 155 x 88.5 mm) mounted sideways
+(landscape - the long side across). On the control deck: a joystick hole
 made to match joystick.stl (22 mm hole + two 3.5 mm screw holes 33.5 mm apart,
 2 mm thick deck) and two standard 30 mm arcade button holes.
 
 PRINT the body lying on its side (a side wall flat on the bed): then nothing
 but the screen window and the round holes needs support. The side profile is
-about 170 x 226 mm and the body is 176 mm wide, so it needs a bed of at least
-230 x 180 mm (Prusa MK4, Bambu Lab P1/X1/A1, ...). The back panel and the
+about 170 x 201 mm and the body is 182 mm wide, so it fits a 220 x 220 mm bed
+(Ender 3, Prusa, Bambu Lab, ...). The back panel and the
 clamps print flat.
 
 All the sizes are at the top: CHECK THE SCREEN AGAINST YOUR OWN SCREEN before
@@ -32,19 +32,19 @@ import struct
 # Sizes you may want to change
 # ----------------------------------------------------------------------------
 WALL = 3.0                 # wall thickness
-WIDTH = 176.0              # outside width of the cabinet (x)
+WIDTH = 182.0              # outside width of the cabinet (x)
 DEPTH = 170.0              # outside depth (y, front = 0)
 FRONT_H = 40.0             # height of the front edge of the control deck
 DECK_BACK = (80.0, 52.0)   # (y, z) where the deck meets the screen face
 FACE_TILT = 12.0           # screen face leans back this many degrees
-FACE_LEN = 177.0           # length of the screen face (bottom to top)
+FACE_LEN = 152.0           # length of the screen face (bottom to top)
 
-# screen (portrait: the 164 mm side runs up the face, the 124 mm side across)
-SCREEN_W, SCREEN_L, SCREEN_T = 124.0, 164.0, 14.4
-VIEW_W, VIEW_L = 88.5, 155.0               # visible picture area
+# screen (landscape: the 164 mm side runs across, the 124 mm side up the face)
+SCREEN_W, SCREEN_L, SCREEN_T = 164.0, 124.0, 14.4
+VIEW_W, VIEW_L = 155.0, 88.5               # visible picture area (across, up)
 VIEW_OFFSET_X = 0.0        # picture centre left(-)/right(+) of the board centre - MEASURE
 VIEW_OFFSET_L = 0.0        # picture centre down(-)/up(+) from the board centre - MEASURE
-SCREEN_BOTTOM = 6.0        # gap from the bottom of the face to the screen board
+SCREEN_BOTTOM = 10.0       # gap from the bottom of the face to the screen board
 CLEAR = 0.5                # play around the screen
 
 # control deck
@@ -346,8 +346,8 @@ def body():
 
 def boss_points():
     u0, s0, u1, s1 = _screen_box()
-    bu = SCREEN_W / 2 + CLEAR + 2.0 + 3.5
-    return [(su * bu, s) for su in (-1, 1) for s in (s0 + 12.0, s1 - 12.0)]
+    bu = SCREEN_W / 2 - 32.0                        # (clear of the corner guides)
+    return [(su * bu, s) for su in (-1, 1) for s in (s0 - 4.0, s1 + 4.0)]     # below / above the screen
 
 
 def back_panel():
@@ -375,9 +375,10 @@ def back_panel():
 
 
 def screen_clamp():
-    """A strap across the back of the screen, screwed to two bosses (print 2)."""
+    """A strap from the boss below the screen to the one above it, across its back (print 2)."""
     m = Mesh()
-    bu = boss_points()[-1][0]
+    pts = boss_points()
+    bu = (pts[1][1] - pts[0][1]) / 2                # half the distance between the screws
     half = bu + 6.0
     m.plate(rect(-half, -6.0, half, 6.0), [circle(-bu, 0, 3.4, 32), circle(bu, 0, 3.4, 32)],
             0.0, 3.0, (0, 0, 0), (1, 0, 0), (0, 1, 0))
