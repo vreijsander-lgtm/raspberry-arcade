@@ -36,8 +36,9 @@ Test prints, to check the sizes first (quick, small):
 
 Inside: a Raspberry Pi 4B on the base and the Elecrow 7" 1024x600 HDMI touch
 screen (RC070, 164 x 124 x 14.4 mm, picture 155 x 88.5 mm) mounted sideways
-(landscape). It screws on from the front through the face into its own mounting
-holes (SCREEN_HOLES - CHECK THEM WITH test_screen.stl, they are a guess).
+(landscape). It sits against the inside of the face and screws onto 4 posts
+(7 mm high, like the Pi standoffs) through its own mounting holes, from behind,
+so the front of the face stays smooth.
 The joystick hole matches joystick.stl (22 mm hole + two 3.5 mm screw holes
 33.5 mm apart, 2 mm thick deck); the buttons are standard 30 mm arcade buttons.
 """
@@ -57,15 +58,17 @@ FACE_TILT = 12.0           # screen face leans back this many degrees
 FACE_LEN = 152.0           # length of the screen face (bottom to top)
 
 # screen (landscape: the 164 mm side runs across, the 124 mm side up the face)
-SCREEN_W, SCREEN_L, SCREEN_T = 164.0, 124.0, 14.4
+SCREEN_W, SCREEN_L, SCREEN_T = 161.0, 107.0, 14.4   # (measured: the board is 161 x 107)
 VIEW_W, VIEW_L = 155.0, 88.5               # visible picture area (across, up)
 VIEW_OFFSET_X = 0.0        # picture centre left(-)/right(+) of the board centre - MEASURE
 VIEW_OFFSET_L = 0.0        # picture centre down(-)/up(+) from the board centre - MEASURE
-SCREEN_BOTTOM = 10.0       # gap from the bottom of the face to the screen board
+SCREEN_BOTTOM = 20.0       # gap from the bottom of the face to the screen board (= screen in the middle)
 # the screen's own mounting holes, from the centre of the board seen from the front
-# (x right, y up) - A GUESS: check with test_screen.stl and change them
+# (x right, y up) - checked with test_screen.stl
 SCREEN_HOLES = [(-78.5, -58.5), (78.5, -58.5), (-78.5, 58.5), (78.5, 58.5)]
-SCREEN_SCREW = 3.2         # hole size for the screen screws (M3; use 2.7 for M2.5)
+SCREEN_SCREW = 2.7         # screw holes in the screen posts (M2.5, like the Pi)
+SCREEN_POST_H = 7.0        # the posts: from the face to the screen's screw holes ...
+SCREEN_POST_D = 6.0        # ... this thick (the front of the face stays closed)
 CLEAR = 0.5                # play around the screen
 
 # control deck
@@ -503,15 +506,17 @@ def deck():
 
 
 def face():
-    """The screen face, printed front side down (u = -x). The screen screws on from the
-    front, through the holes, into its own mounting holes."""
+    """The screen face, printed front side down (u = -x), with 4 posts on the inside: the
+    screen screws onto them from behind (the front stays closed)."""
     m = Mesh()
     u0, s0, u1, s1 = _screen_box()
     vc_u = -VIEW_OFFSET_X
     vc_s = (s0 + s1) / 2 + VIEW_OFFSET_L
     window = rect(vc_u - VIEW_W / 2 - 0.5, vc_s - VIEW_L / 2 - 0.5, vc_u + VIEW_W / 2 + 0.5, vc_s + VIEW_L / 2 + 0.5)
-    holes = [window] + [circle(-hx, hs, SCREEN_SCREW, 32) for hx, hs in screen_holes()]
-    m.plate(clip_outline(FACE_START, FACE_LEN, CLIPPED["face"][2]), holes, 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(clip_outline(FACE_START, FACE_LEN, CLIPPED["face"][2]), [window], 0.0, WALL, (0, 0, 0), X, Y)
+    for hx, hs in screen_holes():
+        m.plate(circle(-hx, hs, SCREEN_POST_D, 40), [circle(-hx, hs, SCREEN_SCREW, 24)],
+                WALL - 0.01, WALL + SCREEN_POST_H, (0, 0, 0), X, Y)
     m.check("face")
     return m, CLIPPED["face"][0]                              # N = -x X face = into the cabinet
 
@@ -684,8 +689,12 @@ def test_screen():
     w, l = SCREEN_W / 2, SCREEN_L / 2
     window = rect(VIEW_OFFSET_X - VIEW_W / 2 - 0.5, VIEW_OFFSET_L - VIEW_L / 2 - 0.5,
                   VIEW_OFFSET_X + VIEW_W / 2 + 0.5, VIEW_OFFSET_L + VIEW_L / 2 + 0.5)
-    holes = [window] + [circle(hx, hy, SCREEN_SCREW, 32) for hx, hy in SCREEN_HOLES]
-    m.plate(rect(-w, -l, w, l), holes, 0.0, 1.2, (0, 0, 0), X, Y)
+    m.plate(rect(-w, -l, w, l), [window], 0.0, 1.2, (0, 0, 0), X, Y)
+    for hx, hy in SCREEN_HOLES:                     # the screw holes (they sit just off the board)
+        m.plate(circle(hx, hy, 8.0, 32), [circle(hx, hy, SCREEN_SCREW, 24)], 0.0, 1.2, (0, 0, 0), X, Y)
+        sy = 1 if hy > 0 else -1
+        y0, y1 = sorted((sy * (l - 3.0), hy - sy * 2.5))
+        m.plate(rect(hx - 3.0, y0, hx + 3.0, y1), [], 0.0, 1.2, (0, 0, 0), X, Y)
     # a little arrow pointing up (which way round it goes): a notch at the top edge
     m.plate([(-6.0, l), (6.0, l), (0.0, l + 8.0)], [], 0.0, 1.2, (0, 0, 0), X, Y)
     m.check("test screen")
