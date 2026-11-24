@@ -373,8 +373,8 @@ bobbing hover pad holds your astronaut on its arm.
   | **T** TINY | smaller: lighter and faster, but easy to miss helpers |
   | **?** MYSTERY | SPLIT + ROCKET, MEGA ROCKET... or an ANVIL / TINY ANVIL (heavy for a moment; it breaks off at a helper) |
 
-* Every time an astronaut reaches a new highest point the picture freezes for a moment: a
-  **SNAPSHOT** of the peak.
+* When the **highest** astronaut reaches a new highest point and starts to fall, the picture
+  freezes for a moment: a **SNAPSHOT** of the peak (lower astronauts don't set it off).
 * A throw is over when the **last astronaut is back down**.
 * A game is **5 throws**. The score is the heights of all 5 added up (in metres); a throw lower
   than 12 m counts as 0. The top 10 is kept in `highscores_toss.json`. Single player only for now.

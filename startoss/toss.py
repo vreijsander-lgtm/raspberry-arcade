@@ -28,8 +28,8 @@ works on the astronaut that touched it):
     ?  MYSTERY  SPLIT + ROCKET or a MEGA ROCKET... or an ANVIL (heavy for a
                 moment) or a TINY ANVIL - an anvil breaks off at a helper
 The highest astronaut counts; a throw ends when the last one is back down.
-Whenever an astronaut reaches a new highest point the picture freezes for a
-moment (a snapshot).
+When the highest astronaut reaches a new highest point and starts to fall,
+the picture freezes for a moment (a snapshot).
 
 A game is 5 throws; the score is the heights of all 5 added up (a throw
 lower than 12 m counts as 0).
@@ -346,6 +346,8 @@ class StarToss:
             self._end_throw()
             return
         lead = max(self.pups, key=lambda q: q["h"])         # the camera follows the highest one
+        if champion is not lead:                            # snapshot only when the TOP one turns down
+            champion = None
         self.x, self.h, self.vx, self.vh = lead["x"], lead["h"], lead["vx"], lead["vh"]
         look = _clamp(self.vh * 0.075, -80.0, 160.0)
         target = max(0.0, self.h - SH * 0.45 + look)
