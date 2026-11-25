@@ -58,17 +58,17 @@ FACE_TILT = 12.0           # screen face leans back this many degrees
 FACE_LEN = 152.0           # length of the screen face (bottom to top)
 
 # screen (landscape: the 164 mm side runs across, the 124 mm side up the face)
-SCREEN_W, SCREEN_L, SCREEN_T = 165.0, 102.0, 14.4   # (measured: the board is 165 x 102)
+SCREEN_W, SCREEN_L, SCREEN_T = 165.0, 103.0, 14.4   # the opening (inner frame): 165 x 103
 # (the opening in the face is the whole board, so the whole screen fits in it)
 SCREEN_BOTTOM = 20.0       # gap from the bottom of the face to the screen board (= screen in the middle)
 # the screen's own mounting holes, from the centre of the board seen from the front
 # (x right, y up) - measured: 3 mm in from the left / right edge, 8 mm past the top / bottom edge
-_HX, _HY = 154.0 / 2, 112.0 / 2   # measured: holes 154 apart (left-right), 112 apart (up-down)
+_HX, _HY = 157.0 / 2, 115.0 / 2   # screw hole centres on the corners of a 157 x 115 rectangle
 SCREEN_HOLES = [(-_HX, -_HY), (_HX, -_HY), (-_HX, _HY), (_HX, _HY)]
 SCREEN_SCREW = 2.7         # screw holes in the screen posts (M2.5, like the Pi)
 SCREEN_POST_H = 7.0        # the posts: from the face to the screen's screw holes ...
 SCREEN_POST_D = 6.0        # ... this thick (the front of the face stays closed)
-CLEAR = 0.5                # play around the screen
+CLEAR = 0.0                # the opening is exactly SCREEN_W x SCREEN_L
 
 # control deck
 DECK_T = 2.0               # deck plate (2 mm like joystick.stl) ...
