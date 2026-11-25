@@ -92,8 +92,8 @@ SCREW_LEAD = 1.2           # the top this many mm of every post hole is wider ..
 SCREW_LEAD_D = 3.6         # ... this wide
 SCREW_SKIN = 1.0           # under the posts only this much plate stays closed (front / bottom stays clean)
 
-# battery (power bank) holder: a low frame on the base, at the back on the right; the
-# power bank stands in it on its end. Inside size (x, y) - change it to fit yours.
+# room for a battery (power bank) at the back on the right (no frame, just free space);
+# the charging hole in the back panel sits next to it. Size (x, y) of that spot.
 BATTERY = (72.0, 28.0)
 BATTERY_WALL, BATTERY_H = 2.0, 18.0
 CABLE_TIES = [(-70.0, 55.0), (70.0, 55.0), (0.0, 25.0), (-45.0, 150.0)]   # pairs of slots for cable ties
@@ -508,13 +508,6 @@ def base():
         ties += [rect(cx - 4.0, cy - 3.5, cx + 4.0, cy - 1.5), rect(cx - 4.0, cy + 1.5, cx + 4.0, cy + 3.5)]
     m.plate(outline, ties, 0.0, SCREW_SKIN, (0, 0, 0), X, Y)
     m.plate(outline, ties + [circle(hx, hy, PI_SCREW, 24) for hx, hy in pi_holes], SCREW_SKIN - 0.01, WALL, (0, 0, 0), X, Y)
-    # battery frame (a gap in the front wall for its cable)
-    bx0, by0, bx1, by1 = battery_box()
-    bw, cx = BATTERY_WALL, (bx0 + bx1) / 2
-    for r in (rect(bx0 - bw, by0 - bw, cx - 7.0, by0), rect(cx + 7.0, by0 - bw, bx1 + bw, by0),
-              rect(bx0 - bw, by1, bx1 + bw, by1 + bw), rect(bx0 - bw, by0 - 0.01, bx0, by1 + 0.01),
-              rect(bx1, by0 - 0.01, bx1 + bw, by1 + 0.01)):
-        m.plate(r, [], WALL - 0.01, WALL + BATTERY_H, (0, 0, 0), X, Y)
     for hx, hy in pi_holes:                         # Raspberry Pi standoffs (USB end towards the back)
         post(m, hx, hy, WALL, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("base")
