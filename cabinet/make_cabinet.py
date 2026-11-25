@@ -50,7 +50,7 @@ import struct
 # Sizes you may want to change
 # ----------------------------------------------------------------------------
 WALL = 3.0                 # wall thickness
-WIDTH = 196.0              # outside width of the cabinet (x)
+WIDTH = 250.0              # outside width of the cabinet (x)
 DEPTH = 170.0              # outside depth (y, front = 0)
 FRONT_H = 40.0             # height of the front edge of the control deck
 DECK_BACK = (80.0, 52.0)   # (y, z) where the deck meets the screen face
@@ -82,7 +82,7 @@ BUTTON_HOLE = 30.0         # standard 30 mm arcade button (use 24.0 for 24 mm bu
 CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 = back)
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
-PI_X0 = -80.0              # left edge of the board (x)
+PI_X0 = -28.0              # left edge of the board (x): the Pi sits in the middle
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
 # back panel
