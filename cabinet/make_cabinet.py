@@ -85,6 +85,18 @@ PI_X0 = -28.0              # left edge of the board (x): the Pi sits in the midd
 PI_PLUG_ROOM = 40.0        # free space between the Pi's USB end and the back (plugs + cables stay inside)
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
+# screw holes in the posts (screen + Pi): a wider lead-in at the top, and the hole goes
+# on down into the plate, so screws find the hole and can go in deeper
+SCREW_LEAD = 1.2           # the top this many mm of every post hole is wider ...
+SCREW_LEAD_D = 3.6         # ... this wide
+SCREW_SKIN = 1.0           # under the posts only this much plate stays closed (front / bottom stays clean)
+
+# battery (power bank) holder: a low frame on the base, at the back on the right; the
+# power bank stands in it on its end. Inside size (x, y) - change it to fit yours.
+BATTERY = (72.0, 28.0)
+BATTERY_WALL, BATTERY_H = 2.0, 18.0
+CABLE_TIES = [(-70.0, 55.0), (70.0, 55.0), (0.0, 25.0), (-45.0, 150.0)]   # pairs of slots for cable ties
+
 # back panel
 PANEL_T = 3.0
 SLOT = PANEL_T + 0.4       # the rail slot it slides in
@@ -152,7 +164,10 @@ def _bridge(outer, holes):
         mp = hole[m]
         others = holes[k + 1:]
         best = None
-        for i in sorted(range(len(poly)), key=lambda i: (poly[i][0] - mp[0]) ** 2 + (poly[i][1] - mp[1]) ** 2):
+        used = {q for q in poly if poly.count(q) > 1}         # corners that already carry a bridge
+        order = sorted(range(len(poly)), key=lambda i: (poly[i][0] < mp[0], poly[i] in used,
+                                                          (poly[i][0] - mp[0]) ** 2 + (poly[i][1] - mp[1]) ** 2))
+        for i in order:
             vp = poly[i]
             ok = True
             for j in range(len(poly)):
@@ -187,10 +202,14 @@ def _earclip(poly):
     idx = list(range(len(poly)))
     tris = []
     guard = 0
+    eps = -1e-12
     while len(idx) > 3 and guard < 100000:
         guard += 1
         n = len(idx)
-        for k in range(n):
+        for k in list(range(n)) + ([] if eps > 0 else [None]):
+            if k is None:                           # stuck: let points right on an edge pass, try again
+                eps = 1e-9
+                break
             ia, ib, ic = idx[k - 1], idx[k], idx[(k + 1) % n]
             a, b, c = poly[ia], poly[ib], poly[ic]
             if _cross(a, b, c) <= 1e-12:
@@ -200,12 +219,13 @@ def _earclip(poly):
                 p = poly[j]
                 if p == a or p == b or p == c:
                     continue
-                if _cross(a, b, p) >= -1e-12 and _cross(b, c, p) >= -1e-12 and _cross(c, a, p) >= -1e-12:
+                if _cross(a, b, p) >= eps and _cross(b, c, p) >= eps and _cross(c, a, p) >= eps:
                     ear = False
                     break
             if ear:
                 tris.append((ia, ib, ic))
                 idx.pop(k)
+                eps = -1e-12
                 break
         else:
             raise RuntimeError("ear clipping got stuck")
@@ -463,16 +483,39 @@ def side(right):
     return m, place
 
 
+def post(m, x, y, w0, h, d, screw):
+    """A screw post standing on w0, h high: lead-in at the top."""
+    m.plate(circle(x, y, d, 40), [circle(x, y, screw, 24)], w0 - 0.01, w0 + h - SCREW_LEAD, (0, 0, 0), X, Y)
+    m.plate(circle(x, y, d, 40), [circle(x, y, SCREW_LEAD_D, 24)], w0 + h - SCREW_LEAD - 0.01, w0 + h, (0, 0, 0), X, Y)
+
+
+def battery_box():
+    """(x0, y0, x1, y1) inside of the battery frame on the base."""
+    x1 = X_IN - RAIL - 1.0 - BATTERY_WALL
+    y1 = DEPTH - PANEL_T - 1.0 - BATTERY_WALL
+    return x1 - BATTERY[0], y1 - BATTERY[1], x1, y1
+
+
 def base():
     m = Mesh()
-    m.plate(clip_outline(0, DEPTH, CLIPPED["base"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
-    # Raspberry Pi standoffs (USB / Ethernet end towards the back panel)
+    outline = clip_outline(0, DEPTH, CLIPPED["base"][2])
     py1 = DEPTH - PANEL_T - PI_PLUG_ROOM            # room behind the Pi for the USB plugs (inside)
     py0 = py1 - 85.0
-    for hx in (PI_X0 + 3.5, PI_X0 + 52.5):
-        for hy in (py0 + 3.5, py0 + 61.5):
-            m.plate(circle(hx, hy, PI_STANDOFF_D, 40), [circle(hx, hy, PI_SCREW, 24)],
-                    WALL - 0.01, WALL + PI_STANDOFF_H, (0, 0, 0), X, Y)
+    pi_holes = [(hx, hy) for hx in (PI_X0 + 3.5, PI_X0 + 52.5) for hy in (py0 + 3.5, py0 + 61.5)]
+    ties = []
+    for cx, cy in CABLE_TIES:                       # two little slots: thread a cable tie through
+        ties += [rect(cx - 4.0, cy - 3.5, cx + 4.0, cy - 1.5), rect(cx - 4.0, cy + 1.5, cx + 4.0, cy + 3.5)]
+    m.plate(outline, ties, 0.0, SCREW_SKIN, (0, 0, 0), X, Y)
+    m.plate(outline, ties + [circle(hx, hy, PI_SCREW, 24) for hx, hy in pi_holes], SCREW_SKIN - 0.01, WALL, (0, 0, 0), X, Y)
+    # battery frame (a gap in the front wall for its cable)
+    bx0, by0, bx1, by1 = battery_box()
+    bw, cx = BATTERY_WALL, (bx0 + bx1) / 2
+    for r in (rect(bx0 - bw, by0 - bw, cx - 7.0, by0), rect(cx + 7.0, by0 - bw, bx1 + bw, by0),
+              rect(bx0 - bw, by1, bx1 + bw, by1 + bw), rect(bx0 - bw, by0 - 0.01, bx0, by1 + 0.01),
+              rect(bx1, by0 - 0.01, bx1 + bw, by1 + 0.01)):
+        m.plate(r, [], WALL - 0.01, WALL + BATTERY_H, (0, 0, 0), X, Y)
+    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (USB end towards the back)
+        post(m, hx, hy, WALL, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("base")
     return m, CLIPPED["base"][0]
 
@@ -507,10 +550,12 @@ def face():
     m = Mesh()
     u0, s0, u1, s1 = _screen_box()
     window = rect(u0, s0, u1, s1)                   # the whole board (+ play): the screen fits in it
-    m.plate(clip_outline(FACE_START, FACE_LEN, CLIPPED["face"][2]), [window], 0.0, WALL, (0, 0, 0), X, Y)
+    outline = clip_outline(FACE_START, FACE_LEN, CLIPPED["face"][2])
+    m.plate(outline, [window], 0.0, SCREW_SKIN, (0, 0, 0), X, Y)
+    m.plate(outline, [window] + [circle(-hx, hs, SCREEN_SCREW, 24) for hx, hs in screen_holes()],
+            SCREW_SKIN - 0.01, WALL, (0, 0, 0), X, Y)
     for hx, hs in screen_holes():
-        m.plate(circle(-hx, hs, SCREEN_POST_D, 40), [circle(-hx, hs, SCREEN_SCREW, 24)],
-                WALL - 0.01, WALL + SCREEN_POST_H, (0, 0, 0), X, Y)
+        post(m, -hx, hs, WALL, SCREEN_POST_H, SCREEN_POST_D, SCREEN_SCREW)
     m.check("face")
     return m, CLIPPED["face"][0]                              # N = -x X face = into the cabinet
 
@@ -559,7 +604,8 @@ def back_panel():
     top = HEIGHT - WALL
     outline = clip_outline(WALL, top, CLIPPED["back"][2])
     holes = []
-    holes.append(rect(PI_X0 + 62.0, WALL + 4.0, PI_X0 + 75.0, WALL + 12.0))              # power cable hole
+    bx0 = battery_box()[0] - BATTERY_WALL
+    holes.append(rect(bx0 - 17.0, WALL + 4.0, bx0 - 4.0, WALL + 12.0))                   # power / charge cable hole
     for row in range(6):                                                                  # air vents
         v = 60.0 + row * 18.0
         for k in range(3):
@@ -750,8 +796,7 @@ def test_pi():
     m.plate(rect(-6.0, -6.0, 55.0, 67.0), [rect(8.0, 10.0, 41.0, 51.0)], 0.0, 1.6, (0, 0, 0), X, Y)
     for hx in (0.0, 49.0):
         for hy in (0.0, 58.0):
-            m.plate(circle(hx, hy, PI_STANDOFF_D, 40), [circle(hx, hy, PI_SCREW, 24)],
-                    1.59, 1.6 + PI_STANDOFF_H, (0, 0, 0), X, Y)
+            post(m, hx, hy, 1.6, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("test pi")
     return m
 
