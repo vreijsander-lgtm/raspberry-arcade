@@ -77,6 +77,7 @@ JOY_HOLE = 22.0
 JOY_SCREW, JOY_SCREW_DX = 3.5, 16.75
 JOY_HEAD, JOY_HEAD_DEPTH = 5.2, 1.0   # recess for the joystick screw heads (5 mm, 1 mm high) - flush
 BUTTON_X = (16.0, 56.0)    # the two buttons (40 mm apart)
+BUTTON_DS = (-10.0, 10.0)  # ... left one 10 mm lower (towards you), right one 10 mm higher (away)
 BUTTON_HOLE = 30.0         # standard 30 mm arcade button (use 24.0 for 24 mm buttons)
 CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 = back)
 
@@ -532,7 +533,7 @@ def deck():
     m = Mesh()
     s = CONTROL_S * DECK_LEN
     out = clip_outline(0, DECK_LEN + 3.5, CLIPPED["deck"][2])
-    holes = [circle(-JOY_X, s, JOY_HOLE, 72)] + [circle(-bx, s, BUTTON_HOLE) for bx in BUTTON_X]
+    holes = [circle(-JOY_X, s, JOY_HOLE, 72)] + [circle(-bx, s + ds, BUTTON_HOLE) for bx, ds in zip(BUTTON_X, BUTTON_DS)]
     screws = [circle(-JOY_X - JOY_SCREW_DX, s, JOY_SCREW, 24), circle(-JOY_X + JOY_SCREW_DX, s, JOY_SCREW, 24)]
     heads = [circle(-JOY_X - JOY_SCREW_DX, s, JOY_HEAD, 40), circle(-JOY_X + JOY_SCREW_DX, s, JOY_HEAD, 40)]
     # top layer (on the bed): wide recesses so the joystick screw heads sit flush
