@@ -12,17 +12,17 @@ screws: the panels have springy arrow clips on both side edges that snap into
 slots in the side walls. The clips click into pockets hidden inside the 6 mm side
 walls, and the walls' lip wraps round the panel edges, so the outside stays clean. Put the panels into one side wall (they rest
 on its ledges), then press the other side wall on until every clip clicks. It is
-meant to stay together - to open the cabinet, slide the back panel up.
+meant to stay together: the back clicks on just like every other panel.
     cabinet_side_left.stl / cabinet_side_right.stl
-                             the two sides: slots for the clips, ledges the panels
-                             rest on, and the rails for the back panel
+                             the two sides: slots for the clips and ledges the
+                             panels rest on
     cabinet_base.stl         the bottom, with the Raspberry Pi standoffs
     cabinet_front.stl        the front below the controls
     cabinet_deck.stl         the control deck: joystick + 2 button holes (prints top down)
     cabinet_screen_face.stl  the front with the screen window and its screw holes
                              (prints front down)
     cabinet_roof.stl         the top
-    cabinet_back_panel.stl   the back: slides UP out of the rails to open it
+    cabinet_back_panel.stl   the back: clicks in like the others (Pi ports stay inside)
 
 Test prints, to check the sizes first (quick, small):
     test_click.stl           one clip + a bit of side wall with its slot and hidden
@@ -32,7 +32,6 @@ Test prints, to check the sizes first (quick, small):
                              the screen should drop into the opening with its own screw
                              holes right under the holes in the frame (arrow = up)
     test_pi_standoffs.stl    the four Pi standoffs: the Pi should sit on them
-    test_back_slot.stl       a bit of the back rails + a strip of panel: should slide
 
 Inside: a Raspberry Pi 4B on the base and the Elecrow 7" 1024x600 HDMI touch
 screen (RC070, 164 x 124 x 14.4 mm, picture 155 x 88.5 mm) mounted sideways
@@ -83,6 +82,7 @@ CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
 PI_X0 = -28.0              # left edge of the board (x): the Pi sits in the middle
+PI_PLUG_ROOM = 40.0        # free space between the Pi's USB end and the back (plugs + cables stay inside)
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
 # back panel
@@ -370,7 +370,8 @@ CLIPPED = {   # name: (placement, thickness, clip positions)
     "front": (((0, WALL, 0), X, Z), WALL, ((WALL + FRONT_TOP) / 2,)),
     "deck": (((0, 0, FRONT_H), NX, DECK_DIR), DECK_TOTAL, (15.0, DECK_LEN - 15.0)),
     "face": (((0, DECK_BACK[0], DECK_BACK[1]), NX, FACE_DIR), WALL, (8.0, FACE_LEN - 6.0)),
-    "roof": (((0, 0, HEIGHT - WALL), X, Y), WALL, (ROOF_V0 + 10.0, SLOT_Y0 - 10.0)),
+    "roof": (((0, 0, HEIGHT - WALL), X, Y), WALL, (ROOF_V0 + 10.0, DEPTH - 15.0)),
+    "back": (((0, DEPTH, 0), X, Z), PANEL_T, (30.0, HEIGHT / 2, HEIGHT - 30.0)),
 }
 
 
@@ -411,7 +412,10 @@ def _grow(poly, offsets):
 
 
 # the side wall outline: the profile grown by the rim, except at the back (back panel)
-SIDE_OUTLINE = _grow(PROFILE, [SIDE_RIM, 0.0, SIDE_RIM, SIDE_RIM, SIDE_RIM, SIDE_RIM])
+SIDE_OUTLINE = _grow(PROFILE, [SIDE_RIM] * 6)
+# extra corners on the back edge, level with the back clips (gives each back slot its
+# own short bridge in the triangulation)
+SIDE_OUTLINE[2:2] = [(SIDE_OUTLINE[1][0], (WALL + c) * 1.0 + 0.37) for c in sorted(CLIPPED["back"][2])]
 
 
 def _cleat(p, q, t, trim_a, trim_b):
@@ -434,16 +438,14 @@ def side(right):
     m = Mesh()
     back0, back1 = (DEPTH, 0.0), (DEPTH, HEIGHT)
     front0 = (0.0, 0.0)
-    rail_front = SLOT_Y0 - 2.0
     shapes = [PROFILE]
     w_shapes = [
-        _cleat(front0, back0, WALL, WALL + 0.3, DEPTH - rail_front + 0.3),                  # under the base edge... on it
-        _cleat(back1, FACE_TOP, WALL, DEPTH - rail_front + 0.3, 5.0),                        # under the roof
+        _cleat(front0, back0, WALL, WALL + 0.3, WALL + 0.3),                                # on the base
+        _cleat(back0, back1, PANEL_T, 2 * WALL + 0.3, 2 * WALL + 0.3),                       # behind the back
+        _cleat(back1, FACE_TOP, WALL, WALL + 0.3, 5.0),                                      # under the roof
         _cleat(FACE_TOP, DECK_BACK, WALL, 8.0, 8.0),                                         # behind the screen face
         _cleat(DECK_BACK, (0.0, FRONT_H), DECK_TOTAL, 6.0, 6.0),                             # under the deck
         _cleat((0.0, FRONT_H), front0, WALL, 8.0, 2 * WALL + 0.3),                           # behind the front
-        rect(rail_front, 2 * WALL + 0.3, SLOT_Y0, HEIGHT - WALL),                            # rail in front of the back panel
-        rect(SLOT_Y1, WALL, DEPTH, HEIGHT),                                                  # rail behind it
     ]
     sw = (lambda poly: [(v, u) for u, v in poly]) if right else (lambda poly: poly)
     # three layers: a closed outside skin, the clip pockets, and the slots on the inside
@@ -453,11 +455,9 @@ def side(right):
     for sh in w_shapes:
         m.plate(sw(sh), [], SIDE_T - 0.01, SIDE_T + RAIL, (0, 0, 0), X, Y)
     # the lip round the front of the panels (hides their edges and the clips)
-    # (a C shape: outside edge all round, open at the back where the back panel goes)
-    inner = _grow(PROFILE, [0.1, 0.0, 0.1, 0.1, 0.1, 0.1])
-    o = SIDE_OUTLINE
-    lip = [o[2], o[3], o[4], o[5], o[0], o[1], inner[1], inner[0], inner[5], inner[4], inner[3], inner[2]]
-    m.plate(sw(lip), [], SIDE_T - 0.01, SIDE_T + SIDE_LIP, (0, 0, 0), X, Y)
+    # (a ring all the way round, the back too)
+    inner = _grow(PROFILE, [0.1] * 6)
+    m.plate(sw(SIDE_OUTLINE), [sw(inner)], SIDE_T - 0.01, SIDE_T + SIDE_LIP, (0, 0, 0), X, Y)
     m.check("side")
     place = ((WIDTH / 2, 0, 0), Z, Y) if right else ((-WIDTH / 2, 0, 0), Y, Z)
     return m, place
@@ -466,10 +466,8 @@ def side(right):
 def base():
     m = Mesh()
     m.plate(clip_outline(0, DEPTH, CLIPPED["base"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
-    # lip that keeps the bottom of the back panel in
-    m.plate(rect(-HALF_IN, SLOT_Y0 - 2.0, HALF_IN, SLOT_Y0), [], WALL - 0.01, WALL + 3.0, (0, 0, 0), X, Y)
     # Raspberry Pi standoffs (USB / Ethernet end towards the back panel)
-    py1 = SLOT_Y0 - 2.0 - 3.0
+    py1 = DEPTH - PANEL_T - PI_PLUG_ROOM            # room behind the Pi for the USB plugs (inside)
     py0 = py1 - 85.0
     for hx in (PI_X0 + 3.5, PI_X0 + 52.5):
         for hy in (py0 + 3.5, py0 + 61.5):
@@ -519,7 +517,7 @@ def face():
 
 def roof():
     m = Mesh()
-    m.plate(clip_outline(ROOF_V0, SLOT_Y0, CLIPPED["roof"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
+    m.plate(clip_outline(ROOF_V0, DEPTH, CLIPPED["roof"][2]), [], 0.0, WALL, (0, 0, 0), X, Y)
     m.check("roof")
     return m, CLIPPED["roof"][0]
 
@@ -554,22 +552,19 @@ def _sign_rows():
 
 
 def back_panel():
-    """Slides down into the rails; pull it up by the finger hole to open the cabinet.
-    "MADE BY SANDER" is engraved in the outside (it prints on the bed, mirrored, so it
+    """The back: clicks in between the side walls like the other panels (sits on the
+    base, under the roof). Only a small hole for the power cable. "MADE BY SANDER" is engraved in the outside (it prints on the bed, mirrored, so it
     reads the right way round from behind the cabinet)."""
     m = Mesh()
-    half = X_IN - 0.2
-    top = HEIGHT - WALL - 0.3
-    outline = [(-half, 0), (half, 0), (half, top), (-half, top)]
+    top = HEIGHT - WALL
+    outline = clip_outline(WALL, top, CLIPPED["back"][2])
     holes = []
-    holes.append(rect(PI_X0 - 1.0, PI_STANDOFF_H, PI_X0 + 57.0, PI_STANDOFF_H + 22.0))   # Pi USB / Ethernet
-    holes.append(rect(PI_X0 + 62.0, 4.0, PI_X0 + 74.0, 12.0))                          # power cable notch
+    holes.append(rect(PI_X0 + 62.0, WALL + 4.0, PI_X0 + 75.0, WALL + 12.0))              # power cable hole
     for row in range(6):                                                                  # air vents
         v = 60.0 + row * 18.0
         for k in range(3):
             u = -45.0 + k * 45.0
             holes.append(rect(u - 18.0, v, u + 18.0, v + 5.0))
-    holes.append(rect(-20.0, top - 22.0, 20.0, top - 10.0))                               # finger hole
     # the engraving: the outside layer is open where the text is (built row by row)
     rows = _sign_rows()
     px = SIGN_PIXEL
@@ -593,7 +588,7 @@ def back_panel():
             c = c1
     m.plate(outline, holes, SIGN_DEPTH, PANEL_T, (0, 0, 0), X, Y)
     m.check("back panel")
-    return m, ((0, SLOT_Y0 + 0.2 + PANEL_T, WALL), X, Z)
+    return m, CLIPPED["back"][0]                              # N = -y: outside on the bed
 
 
 DECK_BACK_3 = (0.0, DECK_BACK[0], DECK_BACK[1])
@@ -761,19 +756,6 @@ def test_pi():
     return m
 
 
-def test_back_slot():
-    """A short piece of the back panel rails and a strip of panel: the strip should slide
-    in and out easily without wobbling."""
-    m = Mesh()
-    L = 30.0
-    m.plate(rect(0, 0, L, 2.0 + SLOT + RAIL), [], 0.0, WALL, (0, 0, 0), X, Y)                # wall
-    m.plate(rect(0, 0, L, 2.0), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)               # front rail
-    m.plate(rect(0, 2.0 + SLOT, L, 2.0 + SLOT + RAIL), [], WALL - 0.01, WALL + RAIL, (0, 0, 0), X, Y)
-    m.plate(rect(L + 6.0, 0, L + 6.0 + 25.0, 25.0), [], 0.0, PANEL_T, (0, 0, 0), X, Y)      # panel strip
-    m.check("test slot")
-    return m
-
-
 def test_click():
     """One clip on a strip of panel and a bit of side wall with its slot: push the clip
     into the slot - it should click into the hidden pocket and hold."""
@@ -792,7 +774,7 @@ def test_click():
 
 
 TESTS = [("test_click.stl", test_click), ("test_controls.stl", test_controls), ("test_screen.stl", test_screen),
-         ("test_pi_standoffs.stl", test_pi), ("test_back_slot.stl", test_back_slot)]
+         ("test_pi_standoffs.stl", test_pi)]
 
 
 # ----------------------------------------------------------------------------
@@ -892,7 +874,7 @@ def write_3mf(path, meshes):
 def main():
     import sys
     here = os.path.dirname(os.path.abspath(__file__))
-    for old in ("arcade_body.stl", "arcade_back_panel.stl", "arcade_screen_clamp.stl", "cabinet_screen_clamp.stl"):
+    for old in ("arcade_body.stl", "arcade_back_panel.stl", "arcade_screen_clamp.stl", "cabinet_screen_clamp.stl", "test_back_slot.stl"):
         if os.path.exists(os.path.join(here, old)):
             os.remove(os.path.join(here, old))
     made = {}
