@@ -82,8 +82,10 @@ BUTTON_HOLE = 30.0         # standard 30 mm arcade button (use 24.0 for 24 mm bu
 CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 = back)
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
-PI_X0 = -28.0              # left edge of the board (x): the Pi sits in the middle
-PI_PLUG_ROOM = 1.0         # gap between the Pi's USB end and the back panel: the Pi sits all the way at the back
+# The Pi sits in the back-left corner: SD card end towards the back, USB / Ethernet
+# towards the front, HDMI side facing the left wall.
+PI_HDMI_ROOM = 35.0        # free space between the Pi's HDMI side and the left wall (rail) for the plugs
+PI_BACK_GAP = 3.0          # gap between the Pi's SD card end and the back panel
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
 # screw holes in the posts (screen + Pi): a wider lead-in at the top, and the hole goes
@@ -96,7 +98,7 @@ SCREW_SKIN = 1.0           # under the posts only this much plate stays closed (
 # the charging hole in the back panel sits next to it. Size (x, y) of that spot.
 BATTERY = (72.0, 28.0)
 BATTERY_WALL, BATTERY_H = 2.0, 18.0
-CABLE_TIES = [(-70.0, 55.0), (70.0, 55.0), (0.0, 25.0), (-45.0, 150.0)]   # pairs of slots for cable ties
+CABLE_TIES = [(-70.0, 55.0), (70.0, 55.0), (0.0, 25.0), (-10.0, 150.0)]   # pairs of slots for cable ties
 
 # back panel
 PANEL_T = 3.0
@@ -500,15 +502,16 @@ def battery_box():
 def base():
     m = Mesh()
     outline = clip_outline(0, DEPTH, CLIPPED["base"][2])
-    py1 = DEPTH - PANEL_T - PI_PLUG_ROOM            # room behind the Pi for the USB plugs (inside)
-    py0 = py1 - 85.0
-    pi_holes = [(hx, hy) for hx in (PI_X0 + 3.5, PI_X0 + 52.5) for hy in (py0 + 3.5, py0 + 61.5)]
+    px0 = -X_IN + RAIL + PI_HDMI_ROOM               # left (HDMI) edge of the board
+    py1 = DEPTH - PANEL_T - PI_BACK_GAP             # back (SD card) end of the board
+    # holes: 3.5 mm in from both long sides, 3.5 and 61.5 mm from the SD card end
+    pi_holes = [(hx, hy) for hx in (px0 + 3.5, px0 + 52.5) for hy in (py1 - 3.5, py1 - 61.5)]
     ties = []
     for cx, cy in CABLE_TIES:                       # two little slots: thread a cable tie through
         ties += [rect(cx - 4.0, cy - 3.5, cx + 4.0, cy - 1.5), rect(cx - 4.0, cy + 1.5, cx + 4.0, cy + 3.5)]
     m.plate(outline, ties, 0.0, SCREW_SKIN, (0, 0, 0), X, Y)
     m.plate(outline, ties + [circle(hx, hy, PI_SCREW, 24) for hx, hy in pi_holes], SCREW_SKIN - 0.01, WALL, (0, 0, 0), X, Y)
-    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (USB end towards the back)
+    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (back-left corner)
         post(m, hx, hy, WALL, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("base")
     return m, CLIPPED["base"][0]
