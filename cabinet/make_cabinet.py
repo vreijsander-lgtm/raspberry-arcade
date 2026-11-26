@@ -502,13 +502,15 @@ def base():
     outline = clip_outline(0, DEPTH, CLIPPED["base"][2])
     py1 = DEPTH - PANEL_T - PI_PLUG_ROOM            # room behind the Pi for the USB plugs (inside)
     py0 = py1 - 85.0
-    pi_holes = [(hx, hy) for hx in (PI_X0 + 3.5, PI_X0 + 52.5) for hy in (py0 + 3.5, py0 + 61.5)]
+    pcx, pcy = PI_X0 + 28.0, py0 + 32.5             # middle of the hole pattern (same spot as before)
+    # Pi turned 90 degrees: the 58 mm hole spacing now runs left-right (x), the 49 mm front-back (y)
+    pi_holes = [(hx, hy) for hx in (pcx - 29.0, pcx + 29.0) for hy in (pcy - 24.5, pcy + 24.5)]
     ties = []
     for cx, cy in CABLE_TIES:                       # two little slots: thread a cable tie through
         ties += [rect(cx - 4.0, cy - 3.5, cx + 4.0, cy - 1.5), rect(cx - 4.0, cy + 1.5, cx + 4.0, cy + 3.5)]
     m.plate(outline, ties, 0.0, SCREW_SKIN, (0, 0, 0), X, Y)
     m.plate(outline, ties + [circle(hx, hy, PI_SCREW, 24) for hx, hy in pi_holes], SCREW_SKIN - 0.01, WALL, (0, 0, 0), X, Y)
-    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (USB end towards the back)
+    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (board turned 90 degrees)
         post(m, hx, hy, WALL, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("base")
     return m, CLIPPED["base"][0]
@@ -787,9 +789,9 @@ def test_screen():
 def test_pi():
     """The four Pi standoffs on a thin plate: the Pi should sit on them, holes lined up."""
     m = Mesh()
-    m.plate(rect(-6.0, -6.0, 55.0, 67.0), [rect(8.0, 10.0, 41.0, 51.0)], 0.0, 1.6, (0, 0, 0), X, Y)
-    for hx in (0.0, 49.0):
-        for hy in (0.0, 58.0):
+    m.plate(rect(-6.0, -6.0, 64.0, 55.0), [rect(10.0, 8.0, 48.0, 41.0)], 0.0, 1.6, (0, 0, 0), X, Y)
+    for hx in (0.0, 58.0):
+        for hy in (0.0, 49.0):
             post(m, hx, hy, 1.6, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("test pi")
     return m
