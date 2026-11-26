@@ -83,7 +83,7 @@ CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
 PI_X0 = -28.0              # left edge of the board (x): the Pi sits in the middle
-PI_PLUG_ROOM = 40.0        # free space between the Pi's USB end and the back (plugs + cables stay inside)
+PI_BACK = 130.0            # back edge of the (turned) Pi board (y): just in front of the battery spot
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
 # screw holes in the posts (screen + Pi): a wider lead-in at the top, and the hole goes
@@ -500,9 +500,7 @@ def battery_box():
 def base():
     m = Mesh()
     outline = clip_outline(0, DEPTH, CLIPPED["base"][2])
-    py1 = DEPTH - PANEL_T - PI_PLUG_ROOM            # room behind the Pi for the USB plugs (inside)
-    py0 = py1 - 85.0
-    pcx, pcy = PI_X0 + 28.0, py0 + 32.5             # middle of the hole pattern (same spot as before)
+    pcx, pcy = PI_X0 + 28.0, PI_BACK - 28.0         # middle of the hole pattern (board is 56 deep now)
     # Pi turned 90 degrees: the 58 mm hole spacing now runs left-right (x), the 49 mm front-back (y)
     pi_holes = [(hx, hy) for hx in (pcx - 29.0, pcx + 29.0) for hy in (pcy - 24.5, pcy + 24.5)]
     ties = []
