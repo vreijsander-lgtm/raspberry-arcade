@@ -83,7 +83,7 @@ CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
 PI_X0 = -28.0              # left edge of the board (x): the Pi sits in the middle
-PI_PLUG_ROOM = 40.0        # free space between the Pi's USB end and the back (plugs + cables stay inside)
+PI_PLUG_ROOM = 5.0         # gap between the Pi's USB end and the back panel: the Pi sits all the way at the back
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
 # screw holes in the posts (screen + Pi): a wider lead-in at the top, and the hole goes
