@@ -82,9 +82,9 @@ BUTTON_HOLE = 30.0         # standard 30 mm arcade button (use 24.0 for 24 mm bu
 CONTROL_S = 0.5            # controls sit this far along the deck (0 = front, 1 = back)
 
 # Raspberry Pi 4B: 85 x 56 board, holes 58 x 49 apart, 3.5 mm in from the edges
-# The Pi sits in the back-left corner: SD card end towards the back, USB / Ethernet
-# towards the front, HDMI side facing the left wall.
-PI_HDMI_ROOM = 35.0        # free space between the Pi's HDMI side and the left wall (rail) for the plugs
+# The Pi sits in the back-right corner: SD card end towards the back, USB / Ethernet
+# towards the front, HDMI side facing left (into the cabinet, lots of room for the plugs).
+PI_SIDE_GAP = 2.0          # gap between the Pi's right side and the right wall (rail)
 PI_BACK_GAP = 3.0          # gap between the Pi's SD card end and the back panel
 PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW = 6.0, 6.0, 2.7   # (2.7: M2.5 screws, not too tight)
 
@@ -94,7 +94,7 @@ SCREW_LEAD = 1.2           # the top this many mm of every post hole is wider ..
 SCREW_LEAD_D = 3.6         # ... this wide
 SCREW_SKIN = 1.0           # under the posts only this much plate stays closed (front / bottom stays clean)
 
-# room for a battery (power bank) at the back on the right (no frame, just free space);
+# room for a battery (power bank) at the back on the left (no frame, just free space);
 # the charging hole in the back panel sits next to it. Size (x, y) of that spot.
 BATTERY = (72.0, 28.0)
 BATTERY_WALL, BATTERY_H = 2.0, 18.0
@@ -494,15 +494,15 @@ def post(m, x, y, w0, h, d, screw):
 
 def battery_box():
     """(x0, y0, x1, y1) inside of the battery frame on the base."""
-    x1 = X_IN - RAIL - 1.0 - BATTERY_WALL
+    x0 = -X_IN + RAIL + 1.0 + BATTERY_WALL           # back-left corner (the Pi has the right one)
     y1 = DEPTH - PANEL_T - 1.0 - BATTERY_WALL
-    return x1 - BATTERY[0], y1 - BATTERY[1], x1, y1
+    return x0, y1 - BATTERY[1], x0 + BATTERY[0], y1
 
 
 def base():
     m = Mesh()
     outline = clip_outline(0, DEPTH, CLIPPED["base"][2])
-    px0 = -X_IN + RAIL + PI_HDMI_ROOM               # left (HDMI) edge of the board
+    px0 = X_IN - RAIL - PI_SIDE_GAP - 56.0          # left (HDMI) edge of the board
     py1 = DEPTH - PANEL_T - PI_BACK_GAP             # back (SD card) end of the board
     # holes: 3.5 mm in from both long sides, 3.5 and 61.5 mm from the SD card end
     pi_holes = [(hx, hy) for hx in (px0 + 3.5, px0 + 52.5) for hy in (py1 - 3.5, py1 - 61.5)]
@@ -511,7 +511,7 @@ def base():
         ties += [rect(cx - 4.0, cy - 3.5, cx + 4.0, cy - 1.5), rect(cx - 4.0, cy + 1.5, cx + 4.0, cy + 3.5)]
     m.plate(outline, ties, 0.0, SCREW_SKIN, (0, 0, 0), X, Y)
     m.plate(outline, ties + [circle(hx, hy, PI_SCREW, 24) for hx, hy in pi_holes], SCREW_SKIN - 0.01, WALL, (0, 0, 0), X, Y)
-    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (back-left corner)
+    for hx, hy in pi_holes:                         # Raspberry Pi standoffs (back-right corner)
         post(m, hx, hy, WALL, PI_STANDOFF_H, PI_STANDOFF_D, PI_SCREW)
     m.check("base")
     return m, CLIPPED["base"][0]
@@ -601,8 +601,8 @@ def back_panel():
     top = HEIGHT - WALL
     outline = clip_outline(WALL, top, CLIPPED["back"][2])
     holes = []
-    bx0 = battery_box()[0] - BATTERY_WALL
-    holes.append(rect(bx0 - 17.0, WALL + 4.0, bx0 - 4.0, WALL + 12.0))                   # power / charge cable hole
+    bx1 = battery_box()[2] + BATTERY_WALL
+    holes.append(rect(bx1 + 4.0, WALL + 4.0, bx1 + 17.0, WALL + 12.0))                   # power / charge cable hole (next to the battery)
     for row in range(6):                                                                  # air vents
         v = 60.0 + row * 18.0
         for k in range(3):
