@@ -92,6 +92,20 @@ DEFAULT_CONFIG = {
 }
 
 
+# The arcade cabinet's screen: the game turns its picture this much extra on
+# every Raspberry Pi (on top of "rotate" in config.json). Not on a PC, so testing
+# there stays the right way up. Wrong way round on the Pi? Use 270 (or 0 for none).
+PI_SCREEN_ROTATE = 90
+
+
+def on_raspberry_pi():
+    try:
+        with open("/proc/device-tree/model", "r", encoding="utf-8", errors="ignore") as f:
+            return "raspberry pi" in f.read().lower()
+    except OSError:
+        return False
+
+
 def load_config():
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))  # deep copy
     try:
@@ -554,6 +568,8 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Title
     # -- display
     def apply_display(self):
         rot = int(self.cfg.get("rotate", 0)) % 360
+        if on_raspberry_pi():
+            rot = (rot + PI_SCREEN_ROTATE) % 360
         if rot not in (0, 90, 180, 270):
             rot = 0
         self.rot = rot
