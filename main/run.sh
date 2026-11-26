@@ -21,6 +21,14 @@ sys.exit(0 if json.load(open("config.json")).get("auto_update", True) is False e
         echo "Auto-update is off (\"auto_update\": false in config.json)."
         return 0
     fi
+    # Right after boot the Wi-Fi is often not up yet: wait for it (max 45 s)
+    # instead of giving up straight away and starting the old version.
+    local waited=0
+    while ! getent hosts github.com >/dev/null 2>&1 && [ "$waited" -lt 45 ]; do
+        [ "$waited" -eq 0 ] && echo "Waiting for the network..."
+        sleep 1
+        waited=$((waited + 1))
+    done
     echo "Checking GitHub for a newer version..."
     if ! timeout 15 git -C "$root" fetch -q origin 2>/dev/null; then
         echo "No connection to GitHub - starting the version we have."
