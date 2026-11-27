@@ -24,12 +24,12 @@ Python and pygame, which is handy for testing.
 
 The start menu also has a **RANDOM GAME** button.
 
-### Student games
+### More games
 
-Other students can add their own games: put a folder with a `game.py` in
-[`student_games/`](student_games/) and it shows up under **STUDENT GAMES** on the start
+Anyone can add their own game: put a folder with a `game.py` in
+[`more_games/`](more_games/) and it shows up under **MORE GAMES** on the start
 screen of every arcade, with its own top 10. The Pis pick it up the next time they start.
-See [student_games/README.md](student_games/README.md) for how to make one.
+See [more_games/README.md](more_games/README.md) for how to make one.
 
 ### Game modes
 

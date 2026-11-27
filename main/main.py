@@ -41,7 +41,7 @@ from fighter_ui import FighterUI
 from glowbug_ui import GlowbugUI
 from pulsar_ui import PulsarUI
 from toss_ui import TossUI
-from student_ui import StudentUI
+from more_games_ui import MoreGamesUI
 from title_ui import TitleUI, ARCADE_NAME, HUD_LABEL, MEDALS, NEON_CYAN, NEON_PINK
 from tetris import Tetris, BOARD_X, BOARD_Y, CELL, COLORS, COLS, DAS_DELAY, DAS_RATE, MAX_SCORES, MAX_START_LEVEL, NAME_CHARS, NAME_LEN, ROTATIONS, ROWS
 from name_filter import is_allowed
@@ -382,7 +382,7 @@ class Menu:
 # To add a game later, add an entry here plus its own handle_/draw_ methods.
 GAMES = [("TETRIS", "main"), ("SPACE SHOOTER", "sh_main"), ("SKY HOPPER", "pf_main"),
          ("SABER BRAWL", "fg_main"), ("GLOWBUG", "gb_main"), ("PULSAR", "pu_main"),
-         ("STAR TOSS", "st_main"), ("STUDENT GAMES", "sg_list")]
+         ("STAR TOSS", "st_main"), ("MORE GAMES", "sg_list")]
 
 # Game modes: (name, what it is). The first one is the normal game. Every
 # mode has its own scoreboard (see board_key).
@@ -415,7 +415,7 @@ MENU_GAME = {"main": "tetris", "sh_main": "shooter", "pf_main": "platformer",
 # how each game starts a single player round (used by RANDOM on the start screen)
 GAME_STARTS = {"main": "start_game", "sh_main": "start_shooter", "pf_main": "start_platformer",
                "fg_main": "start_fighter", "gb_main": "start_glowbug", "pu_main": "start_pulsar",
-               "st_main": "start_toss", "sg_list": "start_random_student"}
+               "st_main": "start_toss", "sg_list": "start_random_more"}
 RANDOM_ITEM = "RANDOM"
 
 # screens that paint their whole background themselves
@@ -440,7 +440,7 @@ GUARDED_STATES = ("entry", "gameover", "sh_over", "pf_over", "fg_over", "gb_over
                   "host_results")
 
 
-class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, StudentUI, TitleUI):
+class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreGamesUI, TitleUI):
     def __init__(self):
         self.cfg = load_config()
         pygame.display.init()
@@ -479,8 +479,8 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Stude
             for mode, _desc in modes[1:]:
                 key = self.board_key(game, mode)
                 self.mode_boards[key] = Scores(os.path.join(BASE_DIR, "highscores_%s.json" % key))
-        # games made by other students (student_games/, see student_ui.py)
-        self.init_students(Scores, BASE_DIR)
+        # games made by other people (more_games/, see more_games_ui.py)
+        self.init_more_games(Scores, BASE_DIR)
         self.sync = None                  # shared scoreboard (shared_scores.py)
         self.sync_timer = 1000
         if self.cfg.get("shared_scores", True):
@@ -518,8 +518,8 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Stude
             "st_main": Menu(["SINGLE PLAYER", "SCOREBOARD", "BACK"]),
             "st_pause": Menu(["RESUME", "RESTART", "SCOREBOARD", "MAIN MENU"]),
             "st_over": Menu(["PLAY AGAIN", "SCOREBOARD", "MAIN MENU"]),
-            "sg_pause": Menu(["RESUME", "RESTART", "SCOREBOARD", "STUDENT GAMES"]),
-            "sg_over": Menu(["PLAY AGAIN", "SCOREBOARD", "STUDENT GAMES"]),
+            "sg_pause": Menu(["RESUME", "RESTART", "SCOREBOARD", "MORE GAMES"]),
+            "sg_over": Menu(["PLAY AGAIN", "SCOREBOARD", "MORE GAMES"]),
             "mp": Menu(["HOST (SPECTATE)", "PLAY WITHOUT HOST", "JOIN A GAME", "BACK"]),
             "mp_pause": Menu(["RESUME", "LEAVE GAME"]),
             "host_pause": Menu(["RESUME VIEW", "END THIS ROUND", "STOP HOSTING"]),
@@ -1515,14 +1515,14 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Stude
                      if self.board_key(base, m) == key), "CLASSIC")
         img = self.neon_title("SCOREBOARD", (255, 170, 40), color=(255, 240, 200))
         self.screen.blit(img, img.get_rect(center=(cx, 62)))
-        student = next((g for g in self.sg_games if g["key"] == key), None)
-        title = student["title"] if student else GAME_TITLES.get(base, "TETRIS")
+        extra = next((g for g in self.sg_games if g["key"] == key), None)
+        title = extra["title"] if extra else GAME_TITLES.get(base, "TETRIS")
         self.text(title + ("" if mode == "CLASSIC" else "  -  " + mode),
                   self.font_small, NEON_CYAN,
                   (cx, 112), "center")
         self.text("NAME", self.font_small, HUD_LABEL, (100, 140))
         self.text("SCORE", self.font_small, HUD_LABEL, (380, 140), "topright")
-        self.text("" if student else "KILLS" if shooter else "METRES" if platformer else "WINS" if fighter else
+        self.text("" if extra else "KILLS" if shooter else "METRES" if platformer else "WINS" if fighter else
                   "LEVEL" if glowbug else "POINTS" if base == "pulsar" else
                   "METRES" if base == "toss" else "LINES",
                   self.font_small, HUD_LABEL,
@@ -1547,7 +1547,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, Stude
             self.text(e["name"], self.font_med if len(e["name"]) <= 6 else self.font_small,
                       col, (100, y), "midleft")
             self.text(str(e["score"]), self.font_med, col, (380, y), "midright")
-            if not student:
+            if not extra:
                 self.text(str(e["lines"]), self.font_med, (190, 180, 230), (500, y), "midright")
         self.text("B1 / B2 : BACK", self.font_tiny, (200, 190, 240), (cx, H - 22), "center")
 

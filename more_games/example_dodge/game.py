@@ -1,8 +1,8 @@
 """
-DODGE - an example student game. Copy this whole folder to start your own!
+DODGE - an example game. Copy this whole folder to start your own!
 
-The arcade finds this file by itself: any folder in student_games/ with a
-game.py in it shows up under STUDENT GAMES on the start screen.
+The arcade finds this file by itself: any folder in more_games/ with a
+game.py in it shows up under MORE GAMES on the start screen.
 """
 import random
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Checks the student games: does each one load, and run for a few seconds
+Checks the more games: does each one load, and run for a few seconds
 without crashing? Used by GitHub on every pull request, and handy at home:
 
-    python student_games/check_games.py            check all games
-    python student_games/check_games.py space_cat  check just that one
+    python more_games/check_games.py            check all games
+    python more_games/check_games.py space_cat  check just that one
 """
 import os
 import random
@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "main"))
 
 import pygame                                           # noqa: E402
 
-import student_ui                                       # noqa: E402
+import more_games_ui                                       # noqa: E402
 
 BUTTONS = ("up", "down", "left", "right", "button2")
 MAX_FOLDER_MB = 20
@@ -47,7 +47,7 @@ def check(entry, screen):
         if bad + "(" in code:
             problems.append("uses %s (the arcade does that for you)" % bad)
     try:
-        game = student_ui.StudentUI.sg_load(None, entry)
+        game = more_games_ui.MoreGamesUI.sg_load(None, entry)
     except Exception:
         return problems + ["does not load:\n" + traceback.format_exc()]
     for need in ("update", "draw"):
@@ -79,7 +79,7 @@ def main():
     pygame.font.init()
     pygame.display.set_mode((1, 1))
     screen = pygame.Surface((540, 960)).convert()
-    games = student_ui.find_student_games()
+    games = more_games_ui.find_more_games()
     only = sys.argv[1:]
     if only:
         games = [g for g in games if g["folder"] in only]

@@ -1,16 +1,16 @@
-# Student Games 🎮
+# More Games 🎮
 
 Made a game? Put it here and it shows up on every arcade automatically, under
-**STUDENT GAMES** on the start screen. You don't need to change anything in the arcade itself.
+**MORE GAMES** on the start screen. You don't need to change anything in the arcade itself.
 
 ## How to add your game
 
-1. **Copy** the `example_dodge` folder and give it your own name, e.g. `student_games/space_cat/`.
+1. **Copy** the `example_dodge` folder and give it your own name, e.g. `more_games/space_cat/`.
    Use letters, numbers and `_` only.
 2. **Edit `game.py`** in your folder and make your game (see the rules below).
 3. **Test it** on your own PC (you need Python and pygame):
    ```
-   python student_games/check_games.py space_cat
+   python more_games/check_games.py space_cat
    python main/main.py
    ```
    The first command checks that your game loads and runs. The second starts the

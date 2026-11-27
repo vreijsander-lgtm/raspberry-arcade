@@ -1,10 +1,10 @@
-name: Check student games
+name: Check more games
 
 on:
   pull_request:
-    paths: ["student_games/**", "main/student_ui.py"]
+    paths: ["more_games/**", "main/more_games_ui.py"]
   push:
-    paths: ["student_games/**", "main/student_ui.py"]
+    paths: ["more_games/**", "main/more_games_ui.py"]
 
 jobs:
   check:
@@ -15,4 +15,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install pygame
-      - run: python student_games/check_games.py
+      - run: python more_games/check_games.py

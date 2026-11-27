@@ -1,12 +1,12 @@
 """
-STUDENT GAMES: games made by other students, found automatically.
+MORE GAMES: games made by other people, found automatically.
 
-Every folder in picade/student_games/ that has a game.py in it shows up in the
-STUDENT GAMES list on the start screen (see student_games/README.md for how to
+Every folder in picade/more_games/ that has a game.py in it shows up in the
+MORE GAMES list on the start screen (see more_games/README.md for how to
 make one). Nothing has to be changed in the arcade itself: push the folder to
 GitHub, and the Pis pick it up the next time they start.
 
-A student game can never crash the whole arcade: if it breaks (while loading,
+An added game can never crash the whole arcade: if it breaks (while loading,
 playing or drawing) the arcade shows what went wrong and goes back to the list.
 
 This is a mixin like the other *_ui files: main.py's App inherits from it.
@@ -23,8 +23,8 @@ import pygame
 
 from common import W, H, WHITE, GOLD, RED
 
-STUDENT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                           "student_games")
+GAMES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           "more_games")
 LIST_ROWS = 7                       # how many games the list shows at once
 BUTTONS = ("up", "down", "left", "right", "button1", "button2")
 
@@ -35,14 +35,14 @@ def _clean(text, n):
     return text[:n]
 
 
-def find_student_games():
-    """[{folder, key, title, author, about, path}] of every student_games/*/game.py.
+def find_more_games():
+    """[{folder, key, title, author, about, path}] of every more_games/*/game.py.
     Only reads the files - nothing is run yet (that happens when it's picked)."""
     found = []
-    if not os.path.isdir(STUDENT_DIR):
+    if not os.path.isdir(GAMES_DIR):
         return found
-    for folder in sorted(os.listdir(STUDENT_DIR), key=str.lower):
-        path = os.path.join(STUDENT_DIR, folder, "game.py")
+    for folder in sorted(os.listdir(GAMES_DIR), key=str.lower):
+        path = os.path.join(GAMES_DIR, folder, "game.py")
         if folder.startswith((".", "_")) or not os.path.isfile(path):
             continue
         info = {"TITLE": folder.replace("_", " "), "AUTHOR": "", "DESCRIPTION": "",
@@ -68,27 +68,27 @@ def find_student_games():
     return found
 
 
-class StudentUI:
+class MoreGamesUI:
     # ------------------------------------------------------------------
     # Loading
     # ------------------------------------------------------------------
-    def init_students(self, scores_cls, base_dir):
+    def init_more_games(self, scores_cls, base_dir):
         """Called once by App.__init__: find the games, give each a scoreboard."""
-        self.sg_games = find_student_games()
+        self.sg_games = find_more_games()
         self.sg_sel = 0
         self.sg_top = 0
         self.sg_cur = None              # the entry of the game being played
-        self.sg_obj = None              # the student's Game object
+        self.sg_obj = None              # the game's Game object
         self.sg_error = None            # (title, last lines of the error)
         for g in self.sg_games:
             self.mode_boards[g["key"]] = scores_cls(
                 os.path.join(base_dir, "highscores_%s.json" % g["key"]))
-        print("Student games found:", len(self.sg_games))
+        print("More games found:", len(self.sg_games))
 
     def sg_fail(self, where):
-        """Something in a student game broke: show it, never crash."""
+        """Something in an added game broke: show it, never crash."""
         tb = traceback.format_exc()
-        print("Student game '%s' broke while %s:\n%s" % (
+        print("Game '%s' broke while %s:\n%s" % (
             self.sg_cur["folder"] if self.sg_cur else "?", where, tb))
         lines = [ln for ln in tb.strip().splitlines() if ln.strip(" ~^")][-4:]
         self.sg_error = ("BROKE WHILE " + where.upper(), lines)
@@ -96,9 +96,9 @@ class StudentUI:
         self.set_state("sg_error")
 
     def sg_load(self, entry):
-        """Run the student's game.py (fresh every time) and make its Game."""
+        """Run the game's game.py (fresh every time) and make its Game."""
         folder = os.path.dirname(entry["path"])
-        name = "student_game_" + re.sub(r"\W", "_", entry["folder"])
+        name = "more_game_" + re.sub(r"\W", "_", entry["folder"])
         sys.path.insert(0, folder)              # so it can import its own helper files
         try:
             spec = importlib.util.spec_from_file_location(name, entry["path"])
@@ -109,7 +109,7 @@ class StudentUI:
             if folder in sys.path:
                 sys.path.remove(folder)
 
-    def start_student(self, entry=None):
+    def start_more_game(self, entry=None):
         if entry is None:
             entry = self.sg_games[self.sg_sel]
         self.sg_cur = entry
@@ -120,12 +120,12 @@ class StudentUI:
             return
         self.set_state("sg_play")
 
-    def start_random_student(self):
-        """RANDOM on the start screen landed on STUDENT GAMES."""
+    def start_random_more(self):
+        """RANDOM on the start screen landed on MORE GAMES."""
         if not self.sg_games:
             return
         self.sg_sel = random.randrange(len(self.sg_games))
-        self.start_student()
+        self.start_more_game()
 
     # ------------------------------------------------------------------
     # Input
@@ -144,7 +144,7 @@ class StudentUI:
                 if self.sg_sel == len(self.sg_games):
                     self.set_state("games", reset=False)
                 else:
-                    self.start_student()
+                    self.start_more_game()
                 return
             elif a in ("left", "right") and self.sg_sel < len(self.sg_games):
                 self.show_scores("sg_list", game=self.sg_games[self.sg_sel]["key"])
@@ -169,7 +169,7 @@ class StudentUI:
         if kind == "back" or (kind == "ok" and idx == 0):
             self.set_state("sg_play")
         elif kind == "ok" and idx == 1:
-            self.start_student(self.sg_cur)
+            self.start_more_game(self.sg_cur)
         elif kind == "ok" and idx == 2:
             self.show_scores("sg_pause", game=self.sg_cur["key"])
         elif kind == "ok" and idx == 3:
@@ -181,7 +181,7 @@ class StudentUI:
             return
         kind, idx = r
         if kind == "ok" and idx == 0:
-            self.start_student(self.sg_cur)
+            self.start_more_game(self.sg_cur)
         elif kind == "ok" and idx == 1:
             self.show_scores("sg_over", game=self.sg_cur["key"])
         elif kind == "back" or (kind == "ok" and idx == 2):
@@ -220,7 +220,7 @@ class StudentUI:
     # Drawing
     # ------------------------------------------------------------------
     def sg_draw_game(self):
-        """Let the student's game draw itself (black screen if that breaks)."""
+        """Let the game draw itself (black screen if that breaks)."""
         self.screen.fill((0, 0, 0))
         if self.sg_obj is None:
             return
@@ -276,14 +276,14 @@ class StudentUI:
     def draw_sg_list(self):
         cx = W // 2
         t = time.monotonic()
-        img = self.neon_title("STUDENT GAMES", size=64)
+        img = self.neon_title("MORE GAMES", size=64)
         self.screen.blit(img, img.get_rect(center=(cx, 80)))
-        self.text("MADE BY OTHER STUDENTS", self.font_small, (190, 180, 230),
+        self.text("MADE BY OTHER PLAYERS", self.font_small, (190, 180, 230),
                   (cx, 135), "center")
         if not self.sg_games:
             self.draw_glass(pygame.Rect(40, 300, W - 80, 120))
             self.text("NO GAMES YET!", self.font_med, WHITE, (cx, 335), "center")
-            self.text("ADD ONE IN student_games/", self.font_small, GOLD, (cx, 380), "center")
+            self.text("ADD ONE IN more_games/", self.font_small, GOLD, (cx, 380), "center")
         rows = self.sg_games[self.sg_top:self.sg_top + LIST_ROWS]
         for i, g in enumerate(rows):
             idx = self.sg_top + i
@@ -311,7 +311,7 @@ class StudentUI:
         self.text("B2 : PLAY    LEFT/RIGHT : SCORES    B1 : BACK", self.font_tiny,
                   (200, 190, 240), (cx, H - 22), "center")
 
-    def draw_student_icon(self, box, t):
+    def draw_more_icon(self, box, t):
         """Card icon on the start screen: a little joystick with sparkles."""
         scr = self.screen
         cx, cy = box.centerx, box.centery
