@@ -8,6 +8,10 @@ Everything is written in Python with [pygame](https://www.pygame.org/), and runs
 Raspberry Pi 4 or 5 with Raspberry Pi OS (64-bit). It also runs on a normal PC with
 Python and pygame, which is handy for testing.
 
+> 🎮 **Want to add your own game to the arcade?**
+> Follow the guide in **[more_games/README.md](more_games/README.md)**: copy the example,
+> make your game, push it, and it shows up on every arcade under **MORE GAMES**.
+
 ---
 
 ## The games
@@ -206,6 +210,7 @@ picade/
 ├── glowbug/       Glowbug
 ├── pulsar/        Pulsar
 ├── startoss/      Star Toss
+├── more_games/    games added by other people (see more_games/README.md to add yours)
 ├── cabinet/       3D-printable cabinet (STL files + make_cabinet.py that makes them)
 ├── update/        the tool that updates your Pis from your PC (runs on the PC)
 └── pi-tetris/     the old first version (Tetris only), not used by the arcade
