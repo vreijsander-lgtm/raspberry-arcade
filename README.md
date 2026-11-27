@@ -220,8 +220,7 @@ picade/
 ├── host/          the arcade host Pi: live view of everyone + the arcade's own Wi-Fi
 ├── more_games/    games added by other people (see more_games/README.md to add yours)
 ├── cabinet/       3D-printable cabinet (STL files + make_cabinet.py that makes them)
-├── update/        the tool that updates your Pis from your PC (runs on the PC)
-└── pi-tetris/     the old first version (Tetris only), not used by the arcade
+└── update/        the tool that updates your Pis from your PC (runs on the PC)
 ```
 
 Each game is two files: the rules (no pygame, easy to test) and the drawing and menus
