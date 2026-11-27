@@ -16,7 +16,7 @@ Rare upgrades: sometimes a box is a gold RARE one (much more often after a
 boss). Rare upgrades are strong, one of a kind and change how you play.
 
 Coins: every killed enemy has a small chance to drop a coin that flies to you
-by itself. While choosing, shoot the little reroll cube (far left) to spend a
+by itself. While choosing, shoot the little reroll cube (left of the boxes) to spend a
 coin and get three new upgrades to pick from.
 
 Bosses: every 5th wave (5, 10, 15...) is a boss fight instead of normal enemies.
@@ -63,7 +63,8 @@ BOSS_COINS = 3
 PICK_DELAY = 2.0                  # seconds you can't shoot after the boxes appear
 BOX_W, BOX_H = 150, 140
 BOX_Y = 260                       # where the boxes stop and wait
-BOX_XS = (90, 270, 450)
+# one row: [reroll] [box] [box] [box] - the boxes sit right of the reroll cube
+BOX_XS = (140, 296, 452)
 BOX_ARM_TIME = 0.5                # boxes can't be hit right after arriving
 AFTER_PICK_PAUSE = 1.2            # calm moment before enemies come again
 RARE_CHANCE = 0.045               # chance that a box is a rare upgrade
@@ -73,8 +74,8 @@ BOSS_RARE_CHANCE = 0.40           # ... in the boxes after beating a boss
 COIN_CHANCE = 0.10                # chance that a killed enemy drops a coin
 COIN_R = 9                        # coin radius (for drawing)
 REROLL_COST = 1
-REROLL_X, REROLL_Y = 40, 480      # the little reroll cube (far left, under the boxes)
-REROLL_SIZE = 56
+REROLL_X, REROLL_Y = 32, BOX_Y    # the little reroll cube: far left, in the row of boxes
+REROLL_SIZE = 50
 REROLL_ARM = 0.4                  # new boxes can't be hit right after a reroll
 
 # Special enemies and rare upgrades
@@ -336,7 +337,7 @@ class Shooter:
         self.beam_time = self.beam_charge = 0.0
         self.pick_lock = PICK_DELAY
         xs = BOX_XS if len(picks) == 3 else (
-            (160, 380) if len(picks) == 2 else (270,))
+            (218, 374) if len(picks) == 2 else (296,))
         for i, k in enumerate(picks):
             self.boxes.append({"k": k, "x": float(xs[i]),
                                "y": -BOX_H - i * 40.0, "arm": BOX_ARM_TIME})
