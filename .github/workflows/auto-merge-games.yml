@@ -1,0 +1,72 @@
+# Merges pull requests that add a game to more_games/ - automatically, when:
+#   1. "Check more games" passed (the game loads and plays without crashing), and
+#   2. .github/scripts/review_game_pr.py says it only touches one game folder
+#      and follows the rules in more_games/game_rules.py.
+# Otherwise it leaves a comment on the pull request saying what to fix.
+#
+# This runs from main (workflow_run), never from the pull request's own files,
+# and it only reads the game's code - it never runs it.
+name: Auto-merge games
+
+on:
+  workflow_run:
+    workflows: ["Check more games"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # main: the trusted rules
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Review the game
+        id: review
+        if: github.event.workflow_run.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RESULT_FILE: ${{ runner.temp }}/result.md
+        run: python .github/scripts/review_game_pr.py
+
+      - name: Merge
+        if: steps.review.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.review.outputs.pr }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/result.md"
+          gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --squash --match-head-commit "$HEAD_SHA"
+
+      - name: Say what to fix
+        if: steps.review.outputs.ok == 'false' && steps.review.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.review.outputs.pr }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/result.md"
+
+      - name: The test failed
+        if: github.event.workflow_run.conclusion == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          PR=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefOid \
+                 --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | .number" | head -1)
+          if [ -n "$PR" ]; then
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "### 🕹️ Not merged yet
+          The game test failed, so this can't be added yet. See what went wrong here: $RUN_URL
+          (Run \`python more_games/check_games.py\` on your own PC to test it.) Push a fix and it is checked again."
+          fi

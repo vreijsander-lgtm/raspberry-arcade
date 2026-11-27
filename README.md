@@ -10,7 +10,8 @@ Python and pygame, which is handy for testing.
 
 > 🎮 **Want to add your own game to the arcade?**
 > Follow the guide in **[more_games/README.md](more_games/README.md)**: copy the example,
-> make your game, push it, and it shows up on every arcade under **MORE GAMES**.
+> make your game and send it in with a pull request. If it passes the automatic test,
+> it's added by itself and shows up on every arcade under **MORE GAMES**.
 
 ---
 

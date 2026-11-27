@@ -50,6 +50,18 @@ def main():
     ahead = git("rev-list", "--count", "@{u}..HEAD")
     if not committed and ahead.returncode == 0 and ahead.stdout.strip() == "0":
         return                                            # nothing new, nothing waiting
+    # games added by others (merged on GitHub) come in first, or the push is refused
+    branch = git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    try:
+        pulled = git("pull", "--rebase", "-q", "origin", branch, timeout=90)
+        if pulled.returncode != 0:
+            git("rebase", "--abort")
+            say("Auto-save: saved locally; could not merge in the newest GitHub version: %s"
+                % (pulled.stderr.strip().splitlines() or ["?"])[-1][:160])
+            return
+    except subprocess.TimeoutExpired:
+        say("Auto-save: saved locally; GitHub timed out (it goes up next time).")
+        return
     try:
         r = git("push", "-u", "origin", "HEAD", timeout=90)
     except subprocess.TimeoutExpired:

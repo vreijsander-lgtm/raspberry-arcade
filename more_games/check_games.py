@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Checks the more games: does each one load, and run for a few seconds
-without crashing? Used by GitHub on every pull request, and handy at home:
+Checks the games in more_games/: do they follow the rules (game_rules.py),
+do they load, and do they run for a few seconds without crashing?
+GitHub runs this on every pull request. Run it yourself before you send yours in:
 
     python more_games/check_games.py            check all games
     python more_games/check_games.py space_cat  check just that one
@@ -19,33 +20,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "main"))
 
 import pygame                                           # noqa: E402
 
-import more_games_ui                                       # noqa: E402
+import more_games_ui                                    # noqa: E402
+
+sys.path.insert(0, HERE)
+import game_rules                                       # noqa: E402
 
 BUTTONS = ("up", "down", "left", "right", "button2")
-MAX_FOLDER_MB = 20
-
-
-def folder_size_mb(path):
-    total = 0
-    for root, _dirs, files in os.walk(path):
-        for f in files:
-            total += os.path.getsize(os.path.join(root, f))
-    return total / 1e6
 
 
 def check(entry, screen):
     folder = os.path.dirname(entry["path"])
-    problems = []
-    if folder_size_mb(folder) > MAX_FOLDER_MB:
-        problems.append("folder is bigger than %d MB" % MAX_FOLDER_MB)
+    problems = game_rules.check_folder(folder)
     src = open(entry["path"], encoding="utf-8").read()
     for name in ("TITLE", "AUTHOR"):
         if name + " =" not in src and name + "=" not in src:
             problems.append("no %s = \"...\" line at the top" % name)
-    code = "\n".join(line.split("#", 1)[0] for line in src.splitlines())
-    for bad in ("pygame.display.set_mode", "pygame.display.flip", "pygame.event.get"):
-        if bad + "(" in code:
-            problems.append("uses %s (the arcade does that for you)" % bad)
+    if problems:                                    # never run code that breaks the rules
+        return problems
     try:
         game = more_games_ui.MoreGamesUI.sg_load(None, entry)
     except Exception:
