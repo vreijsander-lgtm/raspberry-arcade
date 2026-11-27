@@ -212,7 +212,7 @@ Climb as high as you can by jumping from platform to platform.
 
 ### Sky Hopper multiplayer
 
-Works like the other games' multiplayer (HOST, PLAY WITHOUT HOST, JOIN A GAME), but it is a
+Works like the other games' multiplayer (PLAY WITHOUT HOST, JOIN A GAME, or the arcade host), but it is a
 **race to the top**:
 
 * Everybody climbs the **same** world.
@@ -254,7 +254,7 @@ SABER BRAWL > MULTIPLAYER works like the other games' multiplayer, but it is alw
 
 * **PLAY WITHOUT HOST** on one Pi, **JOIN A GAME** on the other, then B2 on the first Pi starts
   the fight. With only two Pis this is the way to go.
-* Or use a third Pi as **HOST (SPECTATE)**: it shows the fight big on its screen (LIVE VIEW)
+* Or use the **arcade host Pi** (see `host/README.md`): it shows the fight big on its screen (LIVE VIEW)
   while the two players fight from their own Pis. It starts when both players are in.
 * The host Pi runs the fight; the players' Pis send their buttons to it and show what it sends
   back. A wired network (or good Wi-Fi) feels best.
@@ -284,7 +284,7 @@ You are a glowbug in a neon maze: eat every light while four spiders hunt you.
 
 ### Glowbug multiplayer (light race)
 
-GLOWBUG > MULTIPLAYER works like the other games' multiplayer (HOST, PLAY WITHOUT HOST,
+GLOWBUG > MULTIPLAYER works like the other games' multiplayer (the arcade host, PLAY WITHOUT HOST,
 JOIN A GAME). **2 to 4 players**, all in the **same maze**, **5 rounds**:
 
 * Collect the most **pickups**: light = 1, spark = 2, caught spider = 3, gem = 5.
@@ -296,8 +296,8 @@ JOIN A GAME). **2 to 4 players**, all in the **same maze**, **5 rounds**:
   moment. Everybody starts every round with 1 flash and gets one more per 30 lights.
 * Every bug has its own colour and name; yours says YOU. The bar at the top shows everybody's
   total (+ this round). Between rounds you see the standings.
-* With only two Pis: PLAY WITHOUT HOST on one, JOIN A GAME on the other. A third Pi on
-  HOST (SPECTATE) shows the race big on its screen (LIVE VIEW).
+* With only two Pis: PLAY WITHOUT HOST on one, JOIN A GAME on the other. The arcade host
+  Pi (see `host/README.md`) shows the race big on its screen (LIVE VIEW).
 * Multiplayer races don't go on the scoreboard. If players leave and only one is left, that
   player wins.
 
@@ -337,7 +337,7 @@ With more than one ball you only lose a life when the last ball is gone.
 ### Pulsar multiplayer (1 vs 1)
 
 PULSAR > MULTIPLAYER works like Saber Brawl's: exactly **2 players**, **first to 7 points**.
-PLAY WITHOUT HOST on one Pi, JOIN A GAME on the other (or a third Pi as HOST (SPECTATE)).
+PLAY WITHOUT HOST on one Pi, JOIN A GAME on the other (or use the arcade host Pi, see `host/README.md`).
 **Both players see their own (blue) paddle at the bottom** - the other player is red at the
 top. SMASH works for both. Multiplayer games don't go on the scoreboard.
 
@@ -425,11 +425,11 @@ MULTIPLAYER inside Tetris or inside Space Shooter. A Pi only sees hosts of the g
 * On the host screen a board flashes **red** when it gets a line and **green** when it sends one.
 
 ### Step by step
-1. **On the host Pi:** Games > TETRIS (or SPACE SHOOTER) > MULTIPLAYER > **HOST (SPECTATE)**.
-   It shows its name and IP address and waits for players.
+1. **On the host Pi** (set up once with `host/setup_host.sh`, see `host/README.md`): pick
+   TETRIS (or another game) on its ARCADE HOST screen. It waits for players.
 2. **On every player Pi:** the same game > MULTIPLAYER > **JOIN A GAME**.
    The Pi searches the network automatically; the host appears in the list
-   (e.g. `tetris-host [1 IN]`). Select it and press B2.
+   (`ARCADE HOST [1 IN]`). Select it and press B2.
 3. When all players are listed on the host screen, the host presses **B2 = START GAME**
    (in Tetris the host can first choose the start level with Left/Right). A 3-2-1 countdown starts on all screens.
 4. During a round the in-game menu (B1, in both games) does **not** pause the game - it keeps running.

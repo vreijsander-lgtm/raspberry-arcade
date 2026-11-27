@@ -160,10 +160,16 @@ Every Pi needs the arcade installed and has to be on the same network. Open a ga
 **MULTIPLAYER**, then:
 
 - **PLAY WITHOUT HOST**: this Pi hosts the game and plays too. This is the easiest with two Pis.
-- **JOIN A GAME**: the other Pis join it.
-- **HOST (SPECTATE)**: a third Pi shows everybody's game on its screen (live view).
+- **JOIN A GAME**: the other Pis join it, or the arcade host.
 
 The host picks the **mode** with LEFT / RIGHT in the lobby and starts with Button 2.
+
+### The arcade host Pi
+
+An extra Pi can be the **host**: it doesn't play, it shows everybody's game live on its
+screen. It also makes the arcade's **own Wi-Fi**, which the arcades join by themselves
+(no Wi-Fi passwords to type). Setting it up is one script: see
+**[host/README.md](host/README.md)**.
 
 > **Every Pi must run the same version** of the arcade, so update them all together (see
 > below).
@@ -211,6 +217,7 @@ picade/
 ├── glowbug/       Glowbug
 ├── pulsar/        Pulsar
 ├── startoss/      Star Toss
+├── host/          the arcade host Pi: live view of everyone + the arcade's own Wi-Fi
 ├── more_games/    games added by other people (see more_games/README.md to add yours)
 ├── cabinet/       3D-printable cabinet (STL files + make_cabinet.py that makes them)
 ├── update/        the tool that updates your Pis from your PC (runs on the PC)

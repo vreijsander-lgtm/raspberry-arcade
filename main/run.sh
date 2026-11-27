@@ -59,6 +59,11 @@ main() {
     fi
     # What the update did is kept in update.log (handy to see if it worked).
     update_from_github 2>&1 | tee update.log
+    # Arcade Pis: remember the arcade's own Wi-Fi (made by the host Pi, see
+    # host/README.md), so they join it by themselves. The host Pi skips this.
+    if [ "$1" != "--host" ] && [ -f join_arcade_wifi.sh ]; then
+        bash join_arcade_wifi.sh 2>&1 | tee -a update.log
+    fi
     # Output of the last run is kept in game.log (handy to find problems at boot).
     # Right after boot the desktop's screen is sometimes not ready yet, and the
     # game stops at once with a screen error: then wait a bit and try again
@@ -67,7 +72,7 @@ main() {
     local try start status
     for try in 1 2 3 4 5 6; do
         start=$SECONDS
-        python3 main.py 2>&1 | tee -a game.log
+        python3 main.py "$@" 2>&1 | tee -a game.log
         status=${PIPESTATUS[0]}
         if [ "$status" -eq 0 ] || [ $((SECONDS - start)) -gt 20 ]; then
             break

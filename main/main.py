@@ -436,6 +436,12 @@ GAME_TITLES = {"tetris": "TETRIS", "shooter": "SPACE SHOOTER", "platformer": "SK
 GAME_MENUS = {"tetris": "main", "shooter": "sh_main", "platformer": "pf_main",
               "fighter": "fg_main", "glowbug": "gb_main", "pulsar": "pu_main"}
 
+# Started with --host (see host/README.md): this Pi is the arcade's HOST. It
+# doesn't play: it picks a game, hosts it and shows everybody's screen live.
+HOST_MODE = "--host" in sys.argv
+# the games the host can host, in the order of its menu
+HOST_GAMES = ["tetris", "shooter", "platformer", "fighter", "glowbug", "pulsar"]
+
 GUARDED_STATES = ("entry", "gameover", "sh_over", "pf_over", "fg_over", "gb_over", "pu_over", "st_over", "sg_over", "mp_results",
                   "host_results")
 
@@ -490,7 +496,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
             except OSError as exc:
                 print("Shared scores off:", exc)
         self.player_name = mp.clean_name(
-            self.cfg.get("player_name") or socket.gethostname())
+            self.cfg.get("player_name") or ("ARCADE HOST" if HOST_MODE else socket.gethostname()))
         self.menus = {
             "games": Menu([name for name, _state in GAMES] + [RANDOM_ITEM]),
             "main": Menu(["SINGLE PLAYER", "MODE", "LEVEL", "MULTIPLAYER",
@@ -520,7 +526,8 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
             "st_over": Menu(["PLAY AGAIN", "SCOREBOARD", "MAIN MENU"]),
             "sg_pause": Menu(["RESUME", "RESTART", "SCOREBOARD", "MORE GAMES"]),
             "sg_over": Menu(["PLAY AGAIN", "SCOREBOARD", "MORE GAMES"]),
-            "mp": Menu(["HOST (SPECTATE)", "PLAY WITHOUT HOST", "JOIN A GAME", "BACK"]),
+            "mp": Menu(["PLAY WITHOUT HOST", "JOIN A GAME", "BACK"]),
+            "host_pick": Menu([GAME_TITLES[g] for g in HOST_GAMES]),
             "mp_pause": Menu(["RESUME", "LEAVE GAME"]),
             "host_pause": Menu(["RESUME VIEW", "END THIS ROUND", "STOP HOSTING"]),
             "join": Menu(["BACK"]),
@@ -530,7 +537,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
         self.start_level = 1
         self.game = None
         self.running = True
-        self.state = "games"
+        self.state = "host_pick" if HOST_MODE else "games"
         self.state_age = 0
         self.das_dir = 0
         self.das_timer = 0
@@ -869,14 +876,12 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
         if not r:
             return
         kind, idx = r
-        if kind == "back" or (kind == "ok" and idx == 3):
+        if kind == "back" or (kind == "ok" and idx == 2):
             self.set_state(GAME_MENUS.get(self.mp_game, "main"), reset=False)
         elif kind == "ok":
             if idx == 0:
-                self.start_hosting()
-            elif idx == 1:
                 self.start_self_host()
-            elif idx == 2:
+            elif idx == 1:
                 self.start_joining()
 
     # -- play without host: this Pi runs the game server in the background and
@@ -893,6 +898,17 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
         self.mp_self = True
         self.client = mp.ClientSession("127.0.0.1", self.host.port, self.player_name)
         self.set_state("connecting")
+
+    # -- the host Pi (started with --host): pick the game to host
+    def handle_host_pick(self, presses):
+        r = self.menus["host_pick"].handle(presses)
+        if r and r[0] == "ok":
+            self.mp_game = HOST_GAMES[r[1]]
+            self.start_hosting()
+
+    def host_home(self):
+        """Where hosting goes back to: the host Pi's game list."""
+        return "host_pick" if HOST_MODE else "mp"
 
     # -- hosting (spectator Pi)
     def start_hosting(self):
@@ -949,7 +965,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
         for a in presses:
             if a == "button1":
                 self.stop_hosting()
-                self.set_state("mp", reset=False)
+                self.set_state(self.host_home(), reset=False)
                 return
             elif a in ("left", "right"):          # LEFT / RIGHT: the game mode
                 self.mp_step_mode(-1 if a == "left" else 1)
@@ -984,7 +1000,7 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
                 self.host_menu_open = False
             elif idx == 2:
                 self.stop_hosting()
-                self.set_state("mp", reset=False)
+                self.set_state(self.host_home(), reset=False)
 
     def handle_host_results(self, presses):
         if any(a in ("button1", "button2") for a in presses):
@@ -1593,10 +1609,20 @@ class App(ShooterUI, PlatformerUI, FighterUI, GlowbugUI, PulsarUI, TossUI, MoreG
         self.draw_menu(self.menus["mp"], "MULTIPLAYER",
                        lines=[GAME_TITLES.get(self.mp_game, "TETRIS"),
                               "PLAY WITH OTHER PIS ON THIS NETWORK",
-                              "HOST = SPECTATOR SCREEN, SEES EVERYONE",
                               "PLAY WITHOUT HOST = THIS PI HOSTS AND PLAYS",
-                              "JOIN = PLAY AGAINST THE OTHERS"],
-                       top=420)
+                              "JOIN = JOIN A GAME (OR THE ARCADE HOST)"],
+                       top=400)
+
+    def draw_host_pick(self):
+        cx = W // 2
+        img = self.neon_title("ARCADE HOST", size=72)
+        self.screen.blit(img, img.get_rect(center=(cx, 90)))
+        self.text("PICK A GAME TO HOST", self.font_med, GOLD, (cx, 160), "center")
+        self.text("THE ARCADES JOIN WITH  MULTIPLAYER > JOIN A GAME", self.font_tiny,
+                  (190, 180, 230), (cx, 196), "center")
+        self.draw_menu(self.menus["host_pick"], top=280)
+        self.text("NAME: %s     IP: %s" % (self.player_name, mp.local_ip()), self.font_tiny,
+                  (160, 150, 205), (cx, H - 50), "center")
 
     def draw_roster(self, names, y0, me=None):
         cx = W // 2

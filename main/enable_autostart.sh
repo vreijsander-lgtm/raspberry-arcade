@@ -1,9 +1,10 @@
 #!/bin/bash
 # Makes Pi Games start by itself when the Raspberry Pi boots to the desktop.
 # Run once:  bash enable_autostart.sh      (undo with: bash disable_autostart.sh)
+# (host/setup_host.sh uses this too, with the host's start script as argument)
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
-RUN="$DIR/run.sh"
+RUN="${1:-$DIR/run.sh}"
 chmod +x "$RUN"
 
 # 1) Standard autostart entry (works on most Raspberry Pi OS desktops)
