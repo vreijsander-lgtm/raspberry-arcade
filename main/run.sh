@@ -60,7 +60,21 @@ main() {
     # What the update did is kept in update.log (handy to see if it worked).
     update_from_github 2>&1 | tee update.log
     # Output of the last run is kept in game.log (handy to find problems at boot).
-    python3 main.py 2>&1 | tee game.log
+    # Right after boot the desktop's screen is sometimes not ready yet, and the
+    # game stops at once with a screen error: then wait a bit and try again
+    # (max 6 times). Quitting the game normally (Alt+F4) does not restart it.
+    : > game.log
+    local try start status
+    for try in 1 2 3 4 5 6; do
+        start=$SECONDS
+        python3 main.py 2>&1 | tee -a game.log
+        status=${PIPESTATUS[0]}
+        if [ "$status" -eq 0 ] || [ $((SECONDS - start)) -gt 20 ]; then
+            break
+        fi
+        echo "The game stopped right away (screen not ready?) - trying again in 5 s ($try/6)" | tee -a game.log
+        sleep 5
+    done
 }
 
 main "$@"
