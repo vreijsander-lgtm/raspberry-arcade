@@ -79,6 +79,7 @@ CARD_INFO = {
     "gb_main": ("EAT THE LIGHT", "glowbug"),
     "pu_main": ("FASTER EVERY POINT", "pulsar"),
     "st_main": ("SPIN, THROW, FLY HIGH", "toss"),
+    "sg_list": ("MADE BY STUDENTS", None),
 }
 
 
@@ -377,6 +378,8 @@ class TitleUI:
             self.draw_pulsar_icon(box, t)
         elif state == "st_main":
             self.draw_toss_icon(box, t)
+        elif state == "sg_list":
+            self.draw_student_icon(box, t)
         else:
             self.draw_shooter_icon(box, t)
 
@@ -452,7 +455,12 @@ class TitleUI:
                   "toss": getattr(self, "scores_st", None)}
         scores = boards.get(board)
         best = scores.best() if scores else 0
-        if six:                                   # slim card: top score on the right
+        if state == "sg_list":                    # student games: how many there are
+            n = len(getattr(self, "sg_games", []))
+            line = "%d GAME%s" % (n, "" if n == 1 else "S")
+            self.text(line, self.font_tiny, GOLD if sel else (150, 130, 80),
+                      (rect.right - 14, rect.y + ty[2]), "topright")
+        elif six:                                 # slim card: top score on the right
             line = "TOP %d" % best if best else "NEW!"
             self.text(line, self.font_tiny, GOLD if sel else (150, 130, 80),
                       (rect.right - 14, rect.y + ty[2]), "topright")

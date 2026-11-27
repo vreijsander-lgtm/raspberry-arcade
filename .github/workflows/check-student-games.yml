@@ -1,0 +1,18 @@
+name: Check student games
+
+on:
+  pull_request:
+    paths: ["student_games/**", "main/student_ui.py"]
+  push:
+    paths: ["student_games/**", "main/student_ui.py"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pygame
+      - run: python student_games/check_games.py
